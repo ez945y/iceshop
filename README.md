@@ -6,6 +6,9 @@
 
 點開就玩，把結果分享給朋友吧。
 
+<img width="756" height="1414" alt="image" src="https://github.com/user-attachments/assets/93c2dddc-28b4-4b47-a871-806d07f040d1" />
+<img width="756" height="1025" alt="image" src="https://github.com/user-attachments/assets/22a4d801-32e6-4ae6-9aa0-4752bc0e8d26" />
+
 ---
 
 概念發想 **Emily** × 設計實作 **Mike**
