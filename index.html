@@ -341,6 +341,7 @@ body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:non
 .res-summary.cmp .rs-item.match{background:linear-gradient(180deg, color-mix(in srgb,var(--accent) 18%, transparent), color-mix(in srgb,var(--accent) 4%, transparent))}
 .res-summary.cmp .rs-item.match small{color:var(--accent); font-weight:700}
 .cmp-note{font-size:12px; color:var(--ink-soft); text-align:center; letter-spacing:.5px; margin:2px 0 18px}
+.rs-none{font-size:13px; color:var(--ink-soft); letter-spacing:.5px}
 
 /* ---------- 「這是什麼」說明浮層 ---------- */
 .explainer{position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
@@ -710,11 +711,13 @@ function playScene(i){
 }
 /* ---------- 底部固定列 ---------- */
 function trayHtml(mode){
-  const need = mode==="must"?5:4;
-  const picked = mode==="must"?state.must:state.ban;
-  const done = picked.length>=need, left=need-picked.length;
+  const isMust = mode==="must";
+  const picked = isMust?state.must:state.ban;
+  // 必吃要滿 5 才能往下；拒吃 0~4 皆可（沒有禁忌也是一種個性），永遠可以往下。
+  const done = isMust ? picked.length>=5 : true;
+  const left = 5-picked.length;
   let visual;
-  if(mode==="must"){
+  if(isMust){
     const chips = state.must.map((id,i)=>{
       const [x,y]=MOUND[i]||[50,50];
       return `<div class="bt" style="left:${x}%;top:${y}%">${ART[id]||""}</div>`;
@@ -724,10 +727,17 @@ function trayHtml(mode){
     const chips = state.ban.map(id=>`<div class="mb">${ART[id]||""}</div>`).join("");
     visual = `<div class="tray-ban">${chips||'<span class="none">🚫</span>'}</div>`;
   }
-  const txt = done
-    ? `<b>${picked.length}</b><span>／${need}　${mode==="must"?"這碗成形了":"名單收齊了"}</span>`
-    : `<b>${picked.length}</b><span>／${need}　${mode==="must"?"再挑 "+left+" 樣放上冰":"再挑 "+left+" 樣"}</span>`;
-  const ctaTxt = done ? (mode==="must"?"下一步":"看結果") : "還沒好";
+  let txt, ctaTxt;
+  if(isMust){
+    txt = done ? `<b>${picked.length}</b><span>／5　這碗成形了</span>`
+               : `<b>${picked.length}</b><span>／5　再挑 ${left} 樣放上冰</span>`;
+    ctaTxt = done ? "下一步" : "還沒好";
+  } else {
+    txt = picked.length
+      ? `<b>${picked.length}</b><span>／4　地雷名單（可留白）</span>`
+      : `<span>留白也可以</span>`;
+    ctaTxt = picked.length ? "看結果" : "沒有禁忌 · 看結果";
+  }
   return `<div class="tray-inner">${visual}
     <div class="tray-txt">${txt}</div>
     <button class="wc-cta ${done?"ready":""}" id="cta" ${done?"":"disabled"}>${ctaTxt}</button></div>`;
@@ -740,7 +750,7 @@ function mountSelect(mode){
   const picked = mode==="must"?state.must:state.ban;
   const stepNo = mode==="must"?"01":"02";
   const stepName = mode==="must"?"必吃 · 靈魂配料":"拒吃 · 地雷名單";
-  const stepSub = mode==="must"?"選 5 樣你吃冰不能沒有的靈魂配料":"選 4 樣打死都不想在碗裡遇到的配料";
+  const stepSub = mode==="must"?"選 5 樣你吃冰不能沒有的靈魂配料":"最多挑 4 樣打死不想遇到的 · 沒有也沒關係";
   const pct = Math.round(picked.length/need*100);
 
   // 第二輪（幫對方測）刻意不顯示任何「換他挑一碗」之類的提示文案，
@@ -885,47 +895,57 @@ const SUBTAG_REASON={
 // 依「拒吃 4 樣」的分佈回傳「一到多個」標籤（每個達 2 樣的類別各算一個標籤，例如 2+2 → 兩個標籤）。
 // 回傳 [{name, reason}]，皆未達 2 樣 → 海納百川。取代舊的單一 subTag/subTagReason。
 function subTagList(ban){
+  // 完全沒填拒吃：沒有禁忌，本身就是一種個性。
+  if(!ban.length){
+    return [{name:"百無禁忌", reason:"你沒有絕對不吃的配料。什麼都能接受、什麼都想嘗一口，這份不設限本身就是一種很好相處的個性，跟你吃飯的人大概都很省心。"}];
+  }
   const c=catCounts(ban);
   const order=["chewy","bean","produce","sauce","jelly"]; // 同票優先序
   const hit=order.filter(k=>c[k]>=2).sort((a,b)=> c[b]-c[a] || order.indexOf(a)-order.indexOf(b));
   if(!hit.length){
-    return [{name:SUBTAG.none.name, reason:`你的 4 樣拒吃挺分散（${ban.map(id=>byId(id).name).join("、")}），沒有特別排斥哪一類。地雷這麼少，大概表示你口味蠻開闊的，跟你吃飯的人多半很省心。`}];
+    return [{name:SUBTAG.none.name, reason:`你的 ${ban.length} 樣拒吃挺分散（${ban.map(id=>byId(id).name).join("、")}），沒有特別排斥哪一類。地雷這麼少，大概表示你口味蠻開闊的，跟你吃飯的人多半很省心。`}];
   }
   return hit.map(k=>({name:SUBTAG[k].name, reason:SUBTAG_REASON[k](namesOfCat(ban,k))}));
 }
 
 /* ============ 刨冰代碼（6 碼英數）============
-   純前端無後端，代碼需自帶資料。編碼「必吃 5 樣」＋「拒吃 4 樣」：
-   必吃＝27 選 5（0…80729），拒吃＝剩下的 22 選 4（0…7314），各自用組合數系統排名，
-   合成 combined = 必吃rank × 7315 + 拒吃rank（0…590539949），再轉 6 碼 base36。
-   （6 碼 base36 容量 36^6≈21.8 億 ≫ 5.9 億；5 碼只有 6047 萬，裝不下，所以要 6 碼。）
-   帶了拒吃 → 契合度能「雙向」看地雷（你的最愛落在對方地雷、對方的最愛落在你地雷）。 */
-const CODE_N=27, CODE_K=5, BAN_K=4;
+   純前端無後端，代碼需自帶資料。編碼「必吃 5 樣」＋「拒吃 0~4 樣」：
+   必吃＝27 選 5（0…80729）。拒吃可留白，改用「可變長度」的組合排名：把剩下 22 樣裡
+   選 0、1、2、3、4 樣的所有組合接續排號（C(22,0..4)=1+22+231+1540+7315=9109 種，序號 0…9108）。
+   合成 combined = 必吃rank × 9109 + 拒吃rank（0…735,369,569），再轉 6 碼 base36。
+   （6 碼 base36 容量 36^6≈21.8 億 ≫ 7.35 億；5 碼只有 6047 萬，裝不下，所以要 6 碼。）
+   帶了拒吃 → 契合度能「雙向」看地雷；沒填拒吃也 OK（就是沒有雙向地雷可看）。 */
+const CODE_N=27, CODE_K=5, BAN_KMAX=4;
 function nCr(n,r){ if(r<0||r>n) return 0; r=Math.min(r,n-r); let v=1; for(let i=0;i<r;i++) v=v*(n-i)/(i+1); return Math.round(v); }
 const MUST_MAX=nCr(CODE_N,CODE_K);       // 80730
-const BAN_MAX=nCr(CODE_N-CODE_K,BAN_K);  // 7315（必吃選完，剩 22 樣選 4）
-// 組合數系統：一組「升冪排序的索引」↔ 一個序號，雙向可逆
+// 拒吃：0~4 樣的組合各段接續排號。BAN_OFF[k]=挑不到 k 樣的組合總數（段起點），BAN_TOTAL=全部段數。
+const BAN_OFF=[0]; for(let k=0;k<=BAN_KMAX;k++) BAN_OFF[k+1]=BAN_OFF[k]+nCr(CODE_N-CODE_K,k);
+const BAN_TOTAL=BAN_OFF[BAN_KMAX+1];     // 9109
+// 組合數系統：一組「升冪排序的索引」↔ 一個序號，雙向可逆（k=0 → 0）
 function rankCombo(sorted){ let r=0; for(let j=0;j<sorted.length;j++) r+=nCr(sorted[j], j+1); return r; }
 function unrankCombo(rank,k){ let r=rank; const combo=new Array(k);
   for(let j=k;j>=1;j--){ let a=j-1; while(nCr(a+1,j)<=r) a++; combo[j-1]=a; r-=nCr(a,j); } return combo; }
+// 可變長度拒吃排名：先看落在哪一段（決定張數 k），段內再用一般組合排名。
+function rankBan(banPos){ const k=banPos.length; return BAN_OFF[k]+rankCombo(banPos); }
+function unrankBan(rank){ let k=0; while(k<BAN_KMAX && rank>=BAN_OFF[k+1]) k++; return unrankCombo(rank-BAN_OFF[k], k); }
 function makeCode(){
   const must=[...state.must].sort((a,b)=>a-b);
   const remaining=[]; for(let i=0;i<CODE_N;i++) if(!must.includes(i)) remaining.push(i);
-  const banPos=[...state.ban].map(id=>remaining.indexOf(id)).sort((a,b)=>a-b);
-  const combined=rankCombo(must)*BAN_MAX + rankCombo(banPos);
+  const banPos=[...state.ban].map(id=>remaining.indexOf(id)).filter(p=>p>=0).sort((a,b)=>a-b);
+  const combined=rankCombo(must)*BAN_TOTAL + rankBan(banPos);
   return combined.toString(36).toUpperCase().padStart(6,"0");
 }
 function decodeCode(str){
   const s=String(str).trim().replace(/\s+/g,"").toLowerCase();
   if(!/^[0-9a-z]{6}$/.test(s)) return null;
   const combined=parseInt(s,36);
-  if(!Number.isInteger(combined) || combined<0 || combined>=MUST_MAX*BAN_MAX) return null;
-  const must=unrankCombo(Math.floor(combined/BAN_MAX), CODE_K);
+  if(!Number.isInteger(combined) || combined<0 || combined>=MUST_MAX*BAN_TOTAL) return null;
+  const must=unrankCombo(Math.floor(combined/BAN_TOTAL), CODE_K);
   if(must.some(i=>i<0||i>26) || new Set(must).size!==CODE_K) return null;
   const mustSet=new Set(must), remaining=[];
   for(let i=0;i<CODE_N;i++) if(!mustSet.has(i)) remaining.push(i);
-  const banPos=unrankCombo(combined%BAN_MAX, BAN_K);
-  if(banPos.some(p=>p<0||p>=remaining.length) || new Set(banPos).size!==BAN_K) return null;
+  const banPos=unrankBan(combined%BAN_TOTAL);
+  if(banPos.some(p=>p<0||p>=remaining.length) || new Set(banPos).size!==banPos.length) return null;
   return {must, ban:banPos.map(p=>remaining[p])};
 }
 
@@ -964,19 +984,19 @@ function mountResult(){
       ${tags.map(t=>`<div class="res-subdesc"><b>${t.name}</b>　${t.reason}</div>`).join("")}
       <div class="res-summary">
         <div class="rs-row"><span class="rs-k">必加</span>${miniList(state.must)}</div>
-        <div class="rs-row"><span class="rs-k ban">不加</span>${miniList(state.ban,true)}</div>
+        <div class="rs-row"><span class="rs-k ban">不加</span>${state.ban.length?miniList(state.ban,true):'<span class="rs-none">沒有特別不吃的</span>'}</div>
       </div>
       <div class="code-card">
         <div class="code-label">你 的 刨 冰 代 碼</div>
         <div class="code-val" id="code">${code}</div>
         <button class="code-copy" id="copy">複製代碼</button>
         <div class="code-hint">把代碼傳給另一半，或輸入對方的代碼，<br>測出你們一起吃這碗冰的契合度。</div>
+        <button class="ghost-btn" id="toCompat" style="width:100%;margin-top:14px">輸入對方的代碼 →</button>
       </div>
       <div class="res-actions">
         <button class="wc-cta ready" id="share">分享我的結果${iceIconSvg()}</button>
         <button class="ghost-btn" id="forPartner">接著幫對方測，看契合度 →</button>
       </div>
-      <button class="ghost-btn small" id="toCompat">我有對方的代碼</button>
       <button class="ghost-btn small" id="whatis">這是什麼測驗？</button>
       <button class="ghost-btn small" id="restart">重新測一次</button>
       <div class="credit">概念發想　<b>Emily</b>　×　設計實作　<b>Mike</b></div>
@@ -1158,6 +1178,7 @@ async function resultCardBlob(){
     ctx.textAlign="left"; ctx.fillStyle=color; ctx.font='700 30px "Noto Sans TC",sans-serif';
     ctx.fillText(label, LX, y); y+=44;
     const n=ids.length, slot=CW/n, ic=off?78:86;
+    if(n===0){ ctx.fillStyle="#a99f8c"; ctx.font='400 28px "Noto Sans TC",sans-serif'; ctx.fillText("沒有特別不吃的 · 百無禁忌", LX, y+8); y+=52; return; }
     for(let i=0;i<n;i++){
       const t=byId(ids[i]), art=ART[ids[i]]; const scx=LX+(i+0.5)*slot;
       if(art){ const im=await svgToImage(art, ic*2, ic*2);
@@ -1171,7 +1192,7 @@ async function resultCardBlob(){
     y+=ic+34+40;
   };
   await drawRow("必加 · 5 樣靈魂配料", state.must, "#6f7a58", false);
-  await drawRow("不加 · 4 樣拒絕往來", state.ban, "#bb3b2e", true);
+  await drawRow(`不加 · ${state.ban.length} 樣拒絕往來`, state.ban, "#bb3b2e", true);
   // 代碼卡
   const chipW=CW, chipH=132;
   ctx.fillStyle="#faf5ea"; ctx.strokeStyle="#b45c3f"; ctx.setLineDash([10,7]); ctx.lineWidth=2.5; roundRect(ctx,LX,y,chipW,chipH,18); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
