@@ -1,0 +1,9 @@
+.DS_Store
+
+# Internal dev notes — kept LOCAL, not published to the public Pages repo.
+# (Delete this line if you actually want HANDOFF.md public.)
+HANDOFF.md
+
+# VM/nginx+certbot deploy scaffolding — GitHub Pages route was chosen instead;
+# kept locally as a fallback, not published.
+deploy/

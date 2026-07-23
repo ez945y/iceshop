@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>刨冰人格測驗</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f2ebdc; --bg2:#e8ddc7;
+  --paper:#faf5ea; --card:#fbf7ef;
+  --ink:#3c372e; --ink-soft:#8b8171; --line:rgba(60,55,46,.16);
+  --accent:#b45c3f;   /* 磚紅 */
+  --accent-2:#c1963f; /* 芥黃 */
+  --good:#6f7a58;     /* 墨綠：必吃 */
+  --seal:#bb3b2e;     /* 印章紅 */
+  --shadow:0 14px 34px rgba(70,55,35,.12);
+  --shadow-sm:0 4px 14px rgba(70,55,35,.1);
+  --radius:14px;
+  --font:"Noto Sans TC","PingFang TC",system-ui,sans-serif;
+  --font-brush:"LXGW WenKai TC","Noto Serif TC","PingFang TC",serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#24211a; --bg2:#1b1813; --paper:#2c281f; --card:#312c22;
+    --ink:#ece3d2; --ink-soft:#a99f8c; --line:rgba(236,227,210,.14);
+    --accent:#d47a5a; --accent-2:#d6ad5e; --good:#98a479; --seal:#d6614f;
+    --shadow:0 14px 34px rgba(0,0,0,.45);
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font); color:var(--ink); font-weight:400;
+  background:
+    radial-gradient(circle at 1px 1px, rgba(60,55,46,.05) 1px, transparent 0) 0 0/22px 22px,
+    linear-gradient(180deg,var(--bg),var(--bg2));
+  background-attachment:fixed;
+  min-height:100vh; overflow-x:hidden; -webkit-font-smoothing:antialiased;
+}
+#app{max-width:720px;margin:0 auto;padding:20px 18px 116px;}
+
+/* ---------- 刊頭 ---------- */
+.mast{text-align:center; padding:2px 0 6px}
+.mast-kicker{font-size:11px; letter-spacing:5px; color:var(--ink-soft)}
+.mast-title{font-family:var(--font-brush); font-weight:700; font-size:30px; color:var(--ink); margin:7px 0 10px; letter-spacing:3px}
+.mast-rule{display:flex; align-items:center; justify-content:center; gap:14px}
+.mast-rule::before,.mast-rule::after{content:""; height:1px; width:66px; background:var(--line)}
+.seal-mark{width:30px; height:30px; border:1.5px solid var(--seal); color:var(--seal); border-radius:7px;
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-brush); font-size:17px; transform:rotate(-4deg)}
+
+/* ---------- 步驟標頭 ---------- */
+.step-head{margin:14px 2px 12px}
+.step-line{display:flex; align-items:baseline; gap:10px}
+.step-no{font-family:var(--font-brush); font-size:24px; color:var(--accent); font-weight:700; line-height:1}
+.step-name{font-size:16px; font-weight:700; letter-spacing:1.5px; color:var(--ink)}
+.step-sub{font-size:13px; color:var(--ink-soft); margin:6px 0 11px; letter-spacing:.3px}
+.progress-line{height:3px; background:var(--line); border-radius:3px; overflow:hidden}
+.progress-line i{display:block; height:100%; background:var(--accent); border-radius:3px; transition:width .35s ease}
+
+/* ---------- 分類籤 ---------- */
+.cat-tabs{display:flex; gap:2px; overflow-x:auto; padding:2px 0 12px; margin:0 -2px; scrollbar-width:none}
+.cat-tabs::-webkit-scrollbar{display:none}
+.cat-tab{flex:0 0 auto; border:none; background:none; font-family:inherit; cursor:pointer;
+  color:var(--ink-soft); font-size:14px; letter-spacing:1px; padding:6px 11px 9px; position:relative; white-space:nowrap;}
+.cat-tab .cc{font-size:11px; color:var(--accent); margin-left:4px; font-variant-numeric:tabular-nums; font-weight:700}
+.cat-tab.is-on{color:var(--ink); font-weight:700}
+.cat-tab.is-on::after{content:""; position:absolute; left:11px; right:11px; bottom:3px; height:2px; background:var(--accent); border-radius:2px}
+
+/* ---------- 配料卡 ---------- */
+.pick-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:11px;}
+@media(max-width:560px){ .pick-grid{grid-template-columns:repeat(3,1fr); gap:9px} }
+@media(max-width:330px){ .pick-grid{grid-template-columns:repeat(2,1fr)} }
+.tile{position:relative; cursor:pointer; border:1px solid var(--line); background:var(--card);
+  border-radius:12px; padding:11px 6px 9px; font-family:inherit; text-align:center;
+  transition:transform .12s, border-color .15s, box-shadow .15s; box-shadow:var(--shadow-sm);}
+.tile:active{transform:scale(.96)}
+.tile .food{position:relative; height:54px; width:62px; margin:2px auto 7px;}
+.tile .food::before{content:""; position:absolute; inset:2px 0 -2px; border-radius:50%;
+  background:radial-gradient(circle at 50% 55%, rgba(60,55,46,.07), transparent 68%);}
+.tile .food svg{position:relative; width:100%; height:100%; filter:drop-shadow(0 4px 4px rgba(60,45,25,.16))}
+.tile .nm{font-size:12.5px; color:var(--ink); letter-spacing:.5px; font-weight:500}
+.tile .cat-dot{position:absolute; left:9px; top:9px; width:6px; height:6px; border-radius:50%}
+.tile .seal{position:absolute; top:6px; right:6px; width:21px; height:21px; border-radius:6px;
+  display:none; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:700;
+  font-family:var(--font-brush); transform:rotate(-6deg); box-shadow:0 2px 4px rgba(0,0,0,.22)}
+.tile[data-picked] .seal{display:flex}
+.tile[data-picked="must"]{border-color:var(--good); box-shadow:0 0 0 1.5px var(--good), var(--shadow-sm); background:linear-gradient(180deg,#f6f8ef,var(--card))}
+.tile[data-picked="must"] .seal{background:var(--good)}
+.tile[data-picked="ban"]{border-color:var(--seal); box-shadow:0 0 0 1.5px var(--seal), var(--shadow-sm)}
+.tile[data-picked="ban"] .food{filter:grayscale(.5) opacity(.6)}
+.tile[data-picked="ban"] .seal{background:var(--seal)}
+
+/* ================= 底部固定列：你的碗 + 進度 + 下一步 ================= */
+@keyframes drop{0%{transform:translate(-50%,-160%) scale(.6);opacity:0}60%{opacity:1}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.bowl-toppings{position:absolute; inset:0; pointer-events:none}
+.bt{position:absolute; transform:translate(-50%,-50%); animation:drop .45s cubic-bezier(.3,1.5,.5,1)}
+.bt svg{width:100%; height:100%; filter:drop-shadow(0 2px 2px rgba(60,45,25,.25))}
+
+.tray-bar{position:fixed; left:0; right:0; bottom:0; z-index:30;
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg,rgba(242,235,220,0),var(--bg) 42%);}
+.tray-inner{max-width:720px; margin:0 auto; display:flex; align-items:center; gap:13px;
+  background:var(--paper); border:1px solid var(--line); border-radius:16px;
+  padding:8px 10px 8px 12px; box-shadow:var(--shadow);}
+.tray-bowl{position:relative; width:64px; flex:0 0 64px}
+.tray-bowl .bowl-svg{width:100%; display:block; filter:drop-shadow(0 4px 5px rgba(70,55,35,.2))}
+.tray-bowl .bt{width:20px; height:20px}
+.tray-ban{width:64px; flex:0 0 64px; display:flex; flex-wrap:wrap; gap:3px; justify-content:center; align-content:center; min-height:40px}
+.tray-ban .mb{position:relative; width:21px; height:21px; animation:drop .4s cubic-bezier(.3,1.4,.5,1)}
+.tray-ban .mb svg{width:100%; height:100%; filter:grayscale(.4)}
+.tray-ban .none{font-size:20px; opacity:.5}
+.tray-txt{flex:1; min-width:0; line-height:1.25}
+.tray-txt b{font-family:var(--font-brush); font-size:23px; color:var(--accent); font-weight:700}
+.tray-txt span{font-size:12.5px; color:var(--ink-soft); letter-spacing:.3px}
+.wc-cta{flex:0 0 auto; border:none; font-family:inherit; cursor:pointer; font-size:15px; font-weight:700;
+  letter-spacing:2px; color:#fff; background:var(--ink); border-radius:11px; padding:12px 20px;
+  transition:opacity .15s, transform .12s, background .2s}
+.wc-cta:active{transform:translateY(1px)}
+.wc-cta:disabled{background:var(--line); color:var(--ink-soft); cursor:not-allowed}
+.wc-cta.ready{background:var(--accent)}
+.wc-cta.big{font-size:17px; letter-spacing:3px; padding:14px 32px; border-radius:14px;
+  animation:ctaPop .5s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes ctaPop{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
+
+/* ================= 開場動畫 ================= */
+.intro{position:relative; text-align:center; min-height:74vh; display:flex; flex-direction:column; justify-content:center; padding-top:10px}
+.skip{position:absolute; top:0; right:0; border:none; background:none; color:var(--ink-soft);
+  font-family:inherit; font-size:13px; letter-spacing:1px; cursor:pointer; padding:8px 4px}
+.intro-stage{position:relative; width:300px; max-width:100%; height:240px; margin:0 auto}
+.stage-svg{width:100%; height:100%; display:block}
+.scene-in{position:absolute; inset:0; animation:sceneIn .55s ease both}
+@keyframes sceneIn{0%{opacity:0; transform:translateY(10px)}100%{opacity:1; transform:none}}
+.intro-cap{font-family:var(--font-brush); font-size:19px; line-height:1.95; color:var(--ink);
+  letter-spacing:1px; max-width:430px; margin:20px auto 0; min-height:5.6em; padding:0 10px}
+.caret{display:inline-block; width:2px; height:.95em; background:var(--accent); vertical-align:-1px; margin-left:3px; animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.intro-dots{display:flex; gap:7px; justify-content:center; margin:14px 0 10px}
+.intro-dots span{width:7px; height:7px; border-radius:50%; background:var(--line); transition:.35s}
+.intro-dots span.on{background:var(--accent); width:22px; border-radius:4px}
+.intro-cta-wrap{min-height:56px; display:flex; justify-content:center; align-items:center}
+
+/* 幕內插畫 */
+.fbowl{position:absolute; left:50%; bottom:4px; transform:translateX(-50%)}
+.fbowl .bowl-svg{width:100%; display:block; filter:drop-shadow(0 8px 10px rgba(70,55,35,.2))}
+.fbowl .bt{width:34px; height:34px}
+.flake{animation:fall .9s linear infinite}
+.flake.f0{animation-delay:0s}.flake.f1{animation-delay:.18s}.flake.f2{animation-delay:.36s}.flake.f3{animation-delay:.54s}.flake.f4{animation-delay:.72s}
+@keyframes fall{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(64px);opacity:0}}
+.drop{position:absolute; width:38px; height:38px; animation:tumble .95s cubic-bezier(.3,1.4,.4,1) both}
+.drop svg{width:100%; height:100%; filter:drop-shadow(0 3px 3px rgba(60,45,25,.22))}
+@keyframes tumble{0%{transform:translateY(-175px) rotate(-35deg);opacity:0}35%{opacity:1}78%{transform:translateY(6px) rotate(5deg)}100%{transform:translateY(0) rotate(0)}}
+.d0{animation-delay:.15s}.d1{animation-delay:.4s}.d2{animation-delay:.65s}.d3{animation-delay:.9s}.d4{animation-delay:1.15s}.d5{animation-delay:1.4s}
+.spoon{position:absolute; width:98px; top:42%}
+.spoon svg{width:100%; filter:drop-shadow(0 3px 4px rgba(60,45,25,.25))}
+.spoon.left{left:-8px; animation:spoonL 1.35s ease both}
+.spoon.right{right:-8px; animation:spoonR 1.35s ease both}
+@keyframes spoonL{0%{transform:translateX(-135px) rotate(12deg);opacity:0}55%{opacity:1}100%{transform:translateX(26px) rotate(5deg)}}
+@keyframes spoonR{0%{transform:translateX(135px) scaleX(-1) rotate(12deg);opacity:0}55%{opacity:1}100%{transform:translateX(-26px) scaleX(-1) rotate(5deg)}}
+.glow{position:absolute; left:50%; top:54%; width:230px; height:230px; transform:translate(-50%,-50%); border-radius:50%;
+  background:radial-gradient(circle, rgba(224,150,50,.45), rgba(224,150,50,0) 66%); animation:pulse 1.9s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.45; transform:translate(-50%,-50%) scale(.9)}50%{opacity:.85; transform:translate(-50%,-50%) scale(1.12)}}
+.spark{position:absolute; color:var(--accent-2); font-size:17px; animation:twinkle 1.5s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.2; transform:scale(.7)}50%{opacity:1; transform:scale(1.15)}}
+
+/* ================= 結果頁 ================= */
+.result{max-width:440px; margin:0 auto; text-align:center}
+.res-bowl{position:relative; height:180px; margin:2px auto 4px}
+.res-name{font-family:var(--font-brush); font-size:33px; font-weight:700; color:var(--ink); letter-spacing:3px; line-height:1.2}
+.res-tag{font-family:var(--font-brush); font-size:17px; color:var(--accent); margin:8px 0 10px; letter-spacing:1px}
+.res-sub{display:inline-block; font-size:13px; color:var(--ink); background:var(--card); border:1px solid var(--line);
+  border-radius:20px; padding:4px 15px; letter-spacing:1px}
+.res-desc{font-size:14.5px; line-height:2; color:var(--ink); letter-spacing:.3px; margin:18px 4px 14px; text-align:justify}
+.res-subdesc{font-size:13px; line-height:1.85; color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
+  border-radius:12px; padding:11px 15px; margin:0 0 18px; text-align:left}
+.res-subdesc b{color:var(--good); font-weight:700}
+.res-summary{margin:2px 0 20px}
+.rs-row{display:flex; align-items:center; gap:6px; justify-content:center; flex-wrap:wrap; margin:8px 0}
+.rs-k{font-family:var(--font-brush); font-size:15px; color:var(--good); width:32px; flex:0 0 32px; text-align:right; margin-right:4px}
+.rs-k.ban{color:var(--seal)}
+.rs-item{display:flex; flex-direction:column; align-items:center; width:46px}
+.rs-item svg{width:34px; height:34px; filter:drop-shadow(0 2px 2px rgba(60,45,25,.15))}
+.rs-item.off svg{filter:grayscale(.55) opacity(.7)}
+.rs-item small{font-size:10px; color:var(--ink-soft); margin-top:1px; letter-spacing:.2px}
+.code-card{background:linear-gradient(180deg,var(--paper),var(--card)); border:1.5px dashed var(--accent);
+  border-radius:16px; padding:16px 14px; margin:4px 0 18px}
+.code-label{font-size:12px; letter-spacing:4px; color:var(--ink-soft)}
+.code-val{font-family:var(--font-brush); font-size:30px; letter-spacing:4px; color:var(--accent); margin:7px 0 13px; font-weight:700; user-select:all}
+.code-copy{border:1px solid var(--accent); background:none; color:var(--accent); font-family:inherit; font-size:13px;
+  padding:7px 22px; border-radius:20px; cursor:pointer; letter-spacing:1px; transition:.15s}
+.code-copy.done{background:var(--good); border-color:var(--good); color:#fff}
+.code-hint{font-size:12px; color:var(--ink-soft); margin-top:13px; line-height:1.65}
+.res-actions{display:flex; flex-direction:column; gap:10px; margin-bottom:12px}
+.res-actions .wc-cta{width:100%; padding:15px}
+.ghost-btn{border:1px solid var(--line); background:var(--paper); color:var(--ink); font-family:inherit; font-size:14px;
+  padding:12px; border-radius:12px; cursor:pointer; letter-spacing:1px; transition:.15s}
+.ghost-btn:active{transform:translateY(1px)}
+.ghost-btn.small{border:none; background:none; color:var(--ink-soft); font-size:13px; margin-top:2px}
+
+/* ================= 雙人契合度 ================= */
+.code-input{margin:8px 0 2px}
+.code-input input{width:100%; font-family:var(--font-brush); font-size:24px; letter-spacing:3px; text-align:center;
+  padding:15px 12px; border:1.5px solid var(--line); border-radius:14px; background:var(--card); color:var(--ink);
+  text-transform:uppercase; -webkit-appearance:none}
+.code-input input:focus{outline:none; border-color:var(--accent)}
+.code-input input::placeholder{color:var(--ink-soft); opacity:.45; letter-spacing:2px}
+.code-err{color:var(--seal); font-size:13px; min-height:20px; margin-top:9px; text-align:center; line-height:1.5}
+.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.compat-hero{text-align:center; margin:6px 0 8px; padding:22px 14px 20px; background:var(--card);
+  border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow-sm)}
+.ch-bowls{display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:12px}
+.chb{text-align:center; width:96px}
+.chb-bowl{width:96px; margin:0 auto}
+.mbowl{position:relative; width:100%}
+.mbowl .bowl-svg{width:100%; display:block; filter:drop-shadow(0 4px 5px rgba(70,55,35,.18))}
+.mbowl .bt{width:17px; height:17px}
+.chb span{display:block; font-size:12px; color:var(--ink); font-weight:700; letter-spacing:.5px; margin-top:2px}
+.chb-vs{font-family:var(--font-brush); font-size:20px; color:var(--accent); align-self:center; padding-bottom:18px}
+.ch-level{font-family:var(--font-brush); font-size:38px; font-weight:700; color:var(--accent); letter-spacing:4px; line-height:1.1}
+.ch-range{font-size:12px; color:var(--ink-soft); letter-spacing:2px; margin-top:6px}
+.ch-meter{font-size:17px; letter-spacing:5px; color:var(--accent); margin-top:14px}
+.ch-meter b{font-family:var(--font-brush); font-size:15px; letter-spacing:1px; margin-left:6px}
+.landmine{font-size:13px; line-height:1.85; color:var(--ink-soft); background:linear-gradient(180deg,var(--paper),var(--card));
+  border:1px dashed var(--accent-2); border-radius:12px; padding:12px 15px; margin:0 0 18px; text-align:left}
+.landmine b{color:var(--accent-2); font-weight:700}
+
+/* ---------- 手機微調 ---------- */
+@media(max-width:480px){
+  #app{padding:16px 14px 106px}
+  .res-name{font-size:28px}
+  .code-val{font-size:26px}
+  .ch-level{font-size:32px}
+  .mast-title{font-size:26px}
+  .tray-inner{gap:10px; padding:7px 9px 7px 11px}
+  .tray-bowl,.tray-ban{width:56px; flex-basis:56px}
+  .tray-txt b{font-size:20px}
+  .wc-cta{font-size:14px; padding:11px 16px}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+
+/* ============ 配料資料 (27 種 / 5 類) ============ */
+const CATS = [
+  {key:"sauce",   name:"醬汁與糖水"},
+  {key:"bean",    name:"豆穀類"},
+  {key:"chewy",   name:"嚼勁類"},
+  {key:"jelly",   name:"果凍類"},
+  {key:"produce", name:"農產類"},
+];
+const TOPPINGS = [
+  {id:0, cat:"sauce",   name:"黑糖水"},
+  {id:1, cat:"sauce",   name:"煉乳"},
+  {id:2, cat:"sauce",   name:"百香果醬"},
+  {id:3, cat:"sauce",   name:"烏梅醬"},
+  {id:4, cat:"sauce",   name:"巧克力醬"},
+  {id:5, cat:"bean",    name:"紅豆"},
+  {id:6, cat:"bean",    name:"綠豆"},
+  {id:7, cat:"bean",    name:"花豆"},
+  {id:8, cat:"bean",    name:"軟花生"},
+  {id:9, cat:"bean",    name:"薏仁"},
+  {id:10,cat:"bean",    name:"麥片"},
+  {id:11,cat:"chewy",   name:"粉粿"},
+  {id:12,cat:"chewy",   name:"芋圓"},
+  {id:13,cat:"chewy",   name:"地瓜圓"},
+  {id:14,cat:"chewy",   name:"粉圓"},
+  {id:15,cat:"chewy",   name:"小湯圓"},
+  {id:16,cat:"chewy",   name:"粉條"},
+  {id:17,cat:"jelly",   name:"仙草"},
+  {id:18,cat:"jelly",   name:"愛玉"},
+  {id:19,cat:"jelly",   name:"布丁"},
+  {id:20,cat:"jelly",   name:"椰果"},
+  {id:21,cat:"jelly",   name:"杏仁豆腐"},
+  {id:22,cat:"produce", name:"蜜芋頭"},
+  {id:23,cat:"produce", name:"蜜地瓜"},
+  {id:24,cat:"produce", name:"蜜鳳梨"},
+  {id:25,cat:"produce", name:"芒果"},
+  {id:26,cat:"produce", name:"草莓"},
+];
+
+/* ============ 食物插畫 SVG（半寫實） ============ */
+let _uid=0; const uid=()=>"a"+(_uid++);
+const PILE=[[30,60,15],[52,52,16],[45,73,14],[68,65,14],[61,37,13],[77,47,12],[37,42,12],[22,50,11]];
+const PILE_SM=[[28,54,10],[42,48,11],[38,64,10],[54,58,11],[50,44,10],[62,52,10],[64,66,9],[30,66,9],[46,72,9],[58,70,9]];
+const CUBES=[[34,44,23,-8],[59,39,21,10],[46,62,24,6],[71,59,18,-12],[27,66,18,14],[65,76,16,4]];
+
+function ballPile(light,mid,dark,opts={}){
+  const pos=opts.pos||PILE, id=uid();
+  const balls=pos.map(([x,y,r])=>{
+    let ex="";
+    if(opts.crease) ex+=`<path d="M${x-r*0.55} ${y} q ${r*0.55} ${r*0.5} ${r*1.1} 0" stroke="${opts.crease}" stroke-width="1.3" fill="none" opacity=".55"/>`;
+    if(opts.speck) ex+=[[-.3,.1],[.25,-.2],[.05,.35],[.4,.25]].map(([dx,dy])=>`<circle cx="${x+r*dx}" cy="${y+r*dy}" r="${r*0.12}" fill="${opts.speck}" opacity=".7"/>`).join("");
+    return `<g><ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r*(opts.flat||0.85)}" fill="url(#${id})"/>
+      <ellipse cx="${x-r*0.32}" cy="${y-r*0.36}" rx="${r*0.34}" ry="${r*0.2}" fill="${light}" opacity=".7"/>${ex}</g>`;
+  }).join("");
+  return `<svg viewBox="0 0 100 100"><defs><radialGradient id="${id}" cx="35%" cy="30%" r="75%">
+    <stop offset="0%" stop-color="${light}"/><stop offset="55%" stop-color="${mid}"/><stop offset="100%" stop-color="${dark}"/>
+    </radialGradient></defs>${balls}</svg>`;
+}
+function ballPileMulti(colors,pos){
+  const balls=(pos||PILE_SM).map(([x,y,r],i)=>{
+    const [light,mid,dark]=colors[i%colors.length], id=uid();
+    return `<g><defs><radialGradient id="${id}" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="${light}"/><stop offset="55%" stop-color="${mid}"/><stop offset="100%" stop-color="${dark}"/></radialGradient></defs>
+      <ellipse cx="${x}" cy="${y}" rx="${r}" ry="${r*0.85}" fill="url(#${id})"/>
+      <ellipse cx="${x-r*0.3}" cy="${y-r*0.35}" rx="${r*0.32}" ry="${r*0.2}" fill="${light}" opacity=".8"/></g>`;
+  }).join("");
+  return `<svg viewBox="0 0 100 100">${balls}</svg>`;
+}
+function saucePool(top,deep,opts={}){
+  const id=uid(); let ex="";
+  if(opts.drizzle) ex+=`<path d="M26 46 q11 -12 21 -1 q10 11 24 -3" stroke="${opts.drizzle}" stroke-width="3.4" fill="none" stroke-linecap="round" opacity=".9"/>`;
+  if(opts.seed) ex+=[[38,54],[50,61],[61,52],[45,66],[58,65],[52,48],[66,58],[42,60],[55,55]].map(([x,y])=>`<ellipse cx="${x}" cy="${y}" rx="2.3" ry="3" fill="${opts.seed}" transform="rotate(25 ${x} ${y})"/>`).join("");
+  return `<svg viewBox="0 0 100 100"><defs><radialGradient id="${id}" cx="40%" cy="30%" r="78%">
+    <stop offset="0%" stop-color="${top}"/><stop offset="100%" stop-color="${deep}"/></radialGradient></defs>
+    <ellipse cx="50" cy="57" rx="37" ry="27" fill="url(#${id})"/>
+    <ellipse cx="40" cy="42" rx="15" ry="6" fill="#ffffff" opacity=".33"/>${ex}</svg>`;
+}
+function jellyCubes(c1,c2,opts={}){
+  const pos=opts.pos||CUBES, id=uid(), g=opts.gloss??.5;
+  const cubes=pos.map(([x,y,s,rot])=>`<g transform="rotate(${rot} ${x} ${y})">
+    <rect x="${x-s/2}" y="${y-s/2}" width="${s}" height="${s}" rx="${s*0.2}" fill="url(#${id})" stroke="${opts.edge||'rgba(0,0,0,.12)'}" stroke-width="1"/>
+    <rect x="${x-s/2+2.5}" y="${y-s/2+2.5}" width="${s*0.4}" height="${s*0.28}" rx="2" fill="#fff" opacity="${g}"/></g>`).join("");
+  return `<svg viewBox="0 0 100 100"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>${cubes}</svg>`;
+}
+
+// 布丁：焦糖布丁
+function pudding(){
+  const id=uid(),ic=uid();
+  return `<svg viewBox="0 0 100 100"><defs>
+    <linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#ffe08a"/><stop offset="100%" stop-color="#f2b33f"/></linearGradient>
+    <linearGradient id="${ic}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8a4a1c"/><stop offset="100%" stop-color="#c06a24"/></linearGradient></defs>
+    <path d="M26 42 q24 -12 48 0 l -6 34 q-18 10 -36 0 Z" fill="url(#${id})"/>
+    <ellipse cx="50" cy="42" rx="24" ry="9" fill="url(#${ic})"/>
+    <ellipse cx="50" cy="40" rx="24" ry="8" fill="#5c3112" opacity=".55"/>
+    <path d="M40 66 q10 5 20 0" stroke="#b5701f" stroke-width="2" fill="none" opacity=".5"/>
+    <ellipse cx="40" cy="56" rx="5" ry="9" fill="#fff" opacity=".28"/></svg>`;
+}
+// 草莓
+function strawberries(){
+  const id=uid();
+  const berry=(x,y,s,rot)=>{
+    const seeds=[[-.2,-.1],[.15,-.05],[0,.2],[-.25,.25],[.2,.3],[-.05,-.3],[.28,.1]]
+      .map(([dx,dy])=>`<ellipse cx="${x+s*dx}" cy="${y+s*dy}" rx="1.5" ry="2.2" fill="#ffe66a" transform="rotate(${rot} ${x+s*dx} ${y+s*dy})"/>`).join("");
+    return `<g transform="rotate(${rot} ${x} ${y})">
+      <path d="M${x} ${y-s*0.55} C ${x+s*0.6} ${y-s*0.55} ${x+s*0.55} ${y+s*0.25} ${x} ${y+s*0.62} C ${x-s*0.55} ${y+s*0.25} ${x-s*0.6} ${y-s*0.55} ${x} ${y-s*0.55} Z" fill="url(#${id})"/>
+      ${seeds}
+      <path d="M${x} ${y-s*0.5} l ${-s*0.28} ${-s*0.12} l ${s*0.14} ${s*0.16} l ${-s*0.2} ${s*0.02} l ${s*0.34} ${s*0.14} l ${s*0.34} ${-s*0.14} l ${-s*0.2} ${-s*0.02} l ${s*0.14} ${-s*0.16} Z" fill="#3fae56"/>
+      <ellipse cx="${x-s*0.22}" cy="${y-s*0.15}" rx="${s*0.14}" ry="${s*0.22}" fill="#fff" opacity=".3"/></g>`;
+  };
+  return `<svg viewBox="0 0 100 100"><defs><radialGradient id="${id}" cx="38%" cy="30%" r="80%">
+    <stop offset="0%" stop-color="#ff6b6b"/><stop offset="60%" stop-color="#e63252"/><stop offset="100%" stop-color="#b01739"/></radialGradient></defs>
+    ${berry(38,52,34,-14)}${berry(64,58,30,16)}</svg>`;
+}
+// 粉條 / 愛玉細絲類：透明條
+function noodles(c1,c2){
+  const id=uid();
+  const strand=(x)=>`<path d="M${x} 24 q 8 14 -2 26 q -9 12 3 26" stroke="url(#${id})" stroke-width="7" fill="none" stroke-linecap="round" opacity=".92"/>
+    <path d="M${x} 24 q 8 14 -2 26 q -9 12 3 26" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".35"/>`;
+  return `<svg viewBox="0 0 100 100"><defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></linearGradient></defs>
+    ${[30,44,58,72].map(strand).join("")}</svg>`;
+}
+// 麥片：燕麥片
+function oats(){
+  const id=uid();
+  const flake=(x,y,rot)=>`<ellipse cx="${x}" cy="${y}" rx="11" ry="7" fill="url(#${id})" transform="rotate(${rot} ${x} ${y})" stroke="#b8925a" stroke-width="1"/>
+    <line x1="${x-7}" y1="${y}" x2="${x+7}" y2="${y}" stroke="#a37c47" stroke-width="1" opacity=".6" transform="rotate(${rot} ${x} ${y})"/>`;
+  return `<svg viewBox="0 0 100 100"><defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#f4e2c1"/><stop offset="100%" stop-color="#d9b782"/></linearGradient></defs>
+    ${[[34,46,10],[58,42,-20],[46,64,30],[68,64,-10],[28,64,-25]].map(([x,y,r])=>flake(x,y,r)).join("")}</svg>`;
+}
+// 花生：花生仁
+function peanuts(){
+  const id=uid();
+  const nut=(x,y,rot)=>`<g transform="rotate(${rot} ${x} ${y})">
+    <path d="M${x-11} ${y} a5 6 0 1 1 6 -5 a6 5 0 0 1 10 0 a5 6 0 1 1 6 5 a6 5 0 0 1 -10 0 a5 6 0 0 1 -6 5 a6 5 0 0 1 -6 -5 Z" fill="url(#${id})" stroke="#c79a5f" stroke-width="1"/>
+    <line x1="${x-8}" y1="${y}" x2="${x+8}" y2="${y}" stroke="#c79a5f" stroke-width="1.2" opacity=".7"/></g>`;
+  return `<svg viewBox="0 0 100 100"><defs><radialGradient id="${id}" cx="35%" cy="30%" r="80%">
+    <stop offset="0%" stop-color="#f6e6c8"/><stop offset="100%" stop-color="#e0bd85"/></radialGradient></defs>
+    ${[[36,46,-15],[62,44,20],[48,66,8]].map(([x,y,r])=>nut(x,y,r)).join("")}</svg>`;
+}
+
+const ART = {
+  0: saucePool("#a5662f","#5f3411"),                                   // 黑糖水
+  1: saucePool("#fff8ec","#eadfc7",{drizzle:"#fbf3e0"}),               // 煉乳
+  2: saucePool("#ffd24a","#f08a1e",{seed:"#3a2b12"}),                  // 百香果醬
+  3: saucePool("#7a2540","#3d0f22"),                                   // 烏梅醬
+  4: saucePool("#6b3a1e","#2c150a",{drizzle:"#3a1e0e"}),               // 巧克力醬
+  5: ballPile("#b04b40","#7a241f","#551512",{crease:"#3f0e0c"}),       // 紅豆
+  6: ballPile("#cdd86a","#9aad39","#6f8121",{pos:PILE_SM}),            // 綠豆
+  7: ballPile("#b98a8f","#7d4652","#4e2a34",{speck:"#3a1c24",flat:0.75}),// 花豆
+  8: peanuts(),                                                        // 軟花生
+  9: ballPile("#f4efe4","#ddd3bf","#bcae93",{pos:PILE_SM,flat:0.7}),   // 薏仁
+  10: oats(),                                                          // 麥片
+  11: jellyCubes("#f0c14b","#c98a2a",{gloss:.55,edge:"rgba(120,80,20,.35)"}), // 粉粿
+  12: ballPile("#a678c9","#7c4aa8","#553072"),                         // 芋圓
+  13: ballPile("#f6a95c","#e07d2c","#b45a16"),                         // 地瓜圓
+  14: ballPile("#4a4a52","#232327","#050506",{crease:"#000"}),         // 粉圓
+  15: ballPileMulti([["#ffd1dc","#ff9db1","#f26d8a"],["#ffffff","#f0f0f0","#d5d5d5"],["#cdeec0","#9fd98a","#6fb85a"]]), // 小湯圓
+  16: noodles("#e7d8b0","#c9b483"),                                    // 粉條
+  17: jellyCubes("#3a3a40","#141417",{gloss:.4,edge:"rgba(0,0,0,.4)"}),// 仙草
+  18: jellyCubes("#ffd76a","#e8a72e",{gloss:.6,edge:"rgba(180,120,20,.35)"}), // 愛玉
+  19: pudding(),                                                       // 布丁
+  20: jellyCubes("#ffffff","#e2e8ea",{gloss:.7,edge:"rgba(120,140,150,.4)"}), // 椰果
+  21: jellyCubes("#fbfbf6","#e6e6dc",{gloss:.55,edge:"rgba(150,150,130,.4)"}),// 杏仁豆腐
+  22: jellyCubes("#8f7fae","#5f4d7e",{gloss:.4,edge:"rgba(50,40,70,.4)"}),    // 蜜芋頭
+  23: jellyCubes("#f4a24b","#c76a1c",{gloss:.5,edge:"rgba(150,80,20,.4)"}),   // 蜜地瓜
+  24: jellyCubes("#ffdd5a","#e8a51f",{gloss:.5,edge:"rgba(160,110,20,.4)"}),  // 蜜鳳梨
+  25: jellyCubes("#ffcf47","#f39424",{gloss:.55,edge:"rgba(180,110,20,.35)"}),// 芒果
+  26: strawberries(),                                                  // 草莓
+};
+
+function foodMarkup(t){
+  if(ART[t.id]) return `<div class="food">${ART[t.id]}</div>`;
+  return `<div class="food"><div class="food-placeholder">🧊</div></div>`;
+}
+
+const byId=id=>TOPPINGS[id];
+
+/* ============ 應用狀態 & 路由 ============ */
+const state={screen:"intro", nickname:"", must:[], ban:[]};
+const app=document.getElementById("app");
+// 冰山上的堆疊座標（%）
+const MOUND=[[42,40],[59,37],[35,52],[66,50],[50,58]];
+
+function render(){
+  if(state.screen==="intro") return mountIntro();
+  if(state.screen==="step1") return mountSelect("must");
+  if(state.screen==="step2") return mountSelect("ban");
+  if(state.screen==="result") return mountResult();
+  if(state.screen==="compat") return mountCompat();
+  app.innerHTML="";
+}
+
+/* ---------- 配料卡 / 分類切換 ---------- */
+const CATCOLOR={sauce:"#c58a3a", bean:"#a3452f", chewy:"#7c4aa8", jelly:"#3fae56", produce:"#e0842c"};
+const TAB_LABEL={all:"全部", sauce:"醬汁糖水", bean:"豆穀", chewy:"嚼勁", jelly:"果凍", produce:"農產"};
+const TAB_ORDER=["all","sauce","bean","chewy","jelly","produce"];
+let curCat="all";
+const availList = mode => mode==="ban" ? TOPPINGS.filter(t=>!state.must.includes(t.id)) : TOPPINGS;
+
+function tabsHtml(mode){
+  const arr = mode==="must"?state.must:state.ban;
+  return TAB_ORDER.map(c=>{
+    const n = c==="all" ? arr.length : arr.filter(id=>byId(id).cat===c).length;
+    return `<button class="cat-tab ${c===curCat?"is-on":""}" data-cat="${c}" type="button">${TAB_LABEL[c]}${n?`<span class="cc">${n}</span>`:""}</button>`;
+  }).join("");
+}
+function gridHtml(mode){
+  const arr = mode==="must"?state.must:state.ban;
+  const seal = mode==="must"?"必":"退";
+  const items = availList(mode).filter(t=>curCat==="all"||t.cat===curCat);
+  return items.map(t=>{
+    const picked = arr.includes(t.id);
+    return `<button class="tile" data-id="${t.id}" type="button" ${picked?`data-picked="${mode}"`:""}>
+      <span class="cat-dot" style="background:${CATCOLOR[t.cat]}"></span>
+      <span class="seal">${seal}</span>
+      <div class="food">${ART[t.id]||""}</div>
+      <div class="nm">${t.name}</div>
+    </button>`;
+  }).join("");
+}
+
+/* ---------- 你的那碗冰 ---------- */
+function bowlSvg(){
+  return `<svg class="bowl-svg" viewBox="0 0 200 150">
+    <defs>
+      <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dff1fb"/><stop offset="1" stop-color="#a9d6ef"/></linearGradient>
+      <linearGradient id="ice" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d6ecf8"/></linearGradient>
+    </defs>
+    <ellipse cx="100" cy="132" rx="76" ry="12" fill="rgba(40,70,90,.12)"/>
+    <path d="M28 96 q72 26 144 0 l-14 34 q-58 20 -116 0 Z" fill="url(#glass)" opacity=".92"/>
+    <ellipse cx="100" cy="96" rx="72" ry="16" fill="#c3e4f5"/>
+    <path d="M34 92 q10 -30 30 -34 q14 -20 36 -16 q22 -6 36 16 q22 4 30 34 q-66 22 -132 0 Z" fill="url(#ice)"/>
+    <path d="M34 92 q10 -30 30 -34 q14 -20 36 -16 q22 -6 36 16 q22 4 30 34" fill="none" stroke="#eaf6fc" stroke-width="2" opacity=".8"/>
+    <g fill="#bfe0f0" opacity=".7"><circle cx="70" cy="66" r="3"/><circle cx="120" cy="60" r="2.5"/><circle cx="96" cy="50" r="2"/><circle cx="140" cy="74" r="2.5"/><circle cx="58" cy="80" r="2"/></g>
+    <ellipse cx="150" cy="106" rx="8" ry="20" fill="#fff" opacity=".35"/>
+  </svg>`;
+}
+function filledBowl(ids,w=200){
+  const chips=ids.map((id,i)=>{const [x,y]=MOUND[i]||[50,50];return `<div class="bt" style="left:${x}%;top:${y}%">${ART[id]||""}</div>`;}).join("");
+  return `<div class="fbowl" style="width:${w}px">${bowlSvg()}<div class="bowl-toppings">${chips}</div></div>`;
+}
+// 靜態（非絕對定位）碗，供並排顯示
+function bowlWithToppings(ids){
+  const chips=ids.map((id,i)=>{const [x,y]=MOUND[i]||[50,50];return `<div class="bt" style="left:${x}%;top:${y}%">${ART[id]||""}</div>`;}).join("");
+  return `<div class="mbowl">${bowlSvg()}<div class="bowl-toppings">${chips}</div></div>`;
+}
+
+/* ============ 開場動畫 ============ */
+const SPOON=`<svg viewBox="0 0 120 44"><g stroke="#3c372e" stroke-width="2.4" stroke-linejoin="round">
+  <rect x="2" y="17" width="74" height="8" rx="4" fill="#c7d0d8"/><ellipse cx="94" cy="22" rx="24" ry="16" fill="#d7dee4"/></g>
+  <ellipse cx="94" cy="22" rx="16" ry="9.5" fill="#aeb9c2"/><ellipse cx="88" cy="18" rx="6" ry="3" fill="#eef3f7" opacity=".85"/></svg>`;
+
+function sceneShaver(){
+  return `<svg class="stage-svg" viewBox="0 0 300 240">
+    <ellipse cx="150" cy="190" rx="60" ry="8" fill="rgba(60,45,25,.12)"/>
+    <path d="M100 160 q50 19 100 0 l-10 25 q-40 14 -80 0 Z" fill="#dff1fb" opacity=".92" stroke="#b9d6e6" stroke-width="1.5"/>
+    <ellipse cx="150" cy="160" rx="50" ry="10.5" fill="#eaf6fc" stroke="#c3e0ef" stroke-width="1.5"/>
+    <path d="M108 158 q17 -17 42 -17 q25 0 42 17 q-42 11 -84 0 Z" fill="#fff"/>
+    <rect x="46" y="118" width="118" height="12" rx="5" fill="#7d9a94" stroke="#3c372e" stroke-width="2"/>
+    <rect x="62" y="42" width="15" height="78" rx="5" fill="#8aa39d" stroke="#3c372e" stroke-width="2"/>
+    <g stroke="#3c372e" stroke-width="2">
+      <rect x="46" y="42" width="78" height="40" rx="11" fill="#b45c3f"/>
+      <rect x="72" y="24" width="34" height="20" rx="6" fill="#cf9a5a"/>
+      <line x1="79" y1="24" x2="79" y2="44" stroke="#a97b40" stroke-width="1.2"/>
+      <line x1="92" y1="24" x2="92" y2="44" stroke="#a97b40" stroke-width="1.2"/>
+    </g>
+    <g>
+      <circle cx="133" cy="60" r="5" fill="#3c372e"/>
+      <g><animateTransform attributeName="transform" type="rotate" from="0 133 60" to="360 133 60" dur="1.05s" repeatCount="indefinite"/>
+        <rect x="131" y="60" width="4" height="32" rx="2" fill="#6b6455"/>
+        <circle cx="133" cy="94" r="6.5" fill="#b45c3f" stroke="#3c372e" stroke-width="2"/></g>
+    </g>
+    <g class="snowfall">${[0,1,2,3,4].map(i=>`<circle class="flake f${i}" cx="${120+i*10}" cy="86" r="${2.6-(i%2)*0.7}" fill="#fff"/>`).join("")}</g>
+  </svg>`;
+}
+function sceneDrop(){
+  const items=[5,12,19,14,26,17];
+  const pos=[[104,150],[146,140],[188,152],[122,166],[172,166],[148,156]];
+  const chips=items.map((id,i)=>`<div class="drop d${i}" style="left:${pos[i][0]}px;top:${pos[i][1]}px">${ART[id]}</div>`).join("");
+  return `${filledBowl([],200)}<div class="drop-layer">${chips}</div>`;
+}
+function sceneSpoons(){
+  return `${filledBowl([5,12,19,26,14],210)}<div class="spoon left">${SPOON}</div><div class="spoon right">${SPOON}</div>`;
+}
+function sceneGlow(){
+  return `<div class="glow"></div>${filledBowl([5,12,19,26,14],210)}
+    <span class="spark" style="left:56px;top:56px">✦</span>
+    <span class="spark" style="right:52px;top:72px;animation-delay:.5s">✦</span>
+    <span class="spark" style="left:92px;top:36px;animation-delay:.9s">✧</span>
+    <span class="spark" style="right:80px;top:150px;animation-delay:1.2s">✧</span>`;
+}
+const SCENES=[
+  {build:sceneShaver, text:"每個人心中，都有一碗屬於自己的完美刨冰。"},
+  {build:sceneDrop,   text:"從小到大，即使口味會隨時間微調，那份對特定配料的執念，早已悄悄刻劃了你的真實模樣。"},
+  {build:sceneSpoons, text:"如果要和另一半共吃這碗冰……你們的口味會完美融合，還是引爆地雷呢？"},
+  {build:sceneGlow,   text:"挑出你必加、與絕對不加的配料，測出你的刨冰人格與戀愛契合度。", cta:true},
+];
+
+let introTimers=[];
+function clearIntro(){ introTimers.forEach(f=>f()); introTimers=[]; }
+function typewriter(el,text,cb){
+  el.textContent=""; let i=0;
+  const iv=setInterval(()=>{ el.textContent=text.slice(0,++i); if(i>=text.length){ clearInterval(iv); cb&&cb(); } }, 52);
+  introTimers.push(()=>clearInterval(iv));
+}
+function startQuiz(){ clearIntro(); state.screen="step1"; render(); window.scrollTo(0,0); }
+function mountIntro(){
+  clearIntro();
+  app.innerHTML=`<div class="intro">
+    <button class="skip" id="skip">跳過開場 ›</button>
+    <div class="intro-stage" id="stage"></div>
+    <div class="intro-cap"><span id="cap"></span><i class="caret"></i></div>
+    <div class="intro-dots" id="dots">${SCENES.map(()=>`<span></span>`).join("")}</div>
+    <div class="intro-cta-wrap" id="ctaWrap"></div>
+  </div>`;
+  document.getElementById("skip").onclick=startQuiz;
+  playScene(0);
+}
+function playScene(i){
+  const stage=document.getElementById("stage"), cap=document.getElementById("cap");
+  const dots=document.getElementById("dots"), ctaWrap=document.getElementById("ctaWrap");
+  if(!stage) return;
+  [...dots.children].forEach((d,k)=>d.classList.toggle("on",k===i));
+  ctaWrap.innerHTML="";
+  stage.innerHTML=`<div class="scene-in">${SCENES[i].build()}</div>`;
+  typewriter(cap, SCENES[i].text, ()=>{
+    if(SCENES[i].cta){
+      ctaWrap.innerHTML=`<button class="wc-cta ready big" id="start">開始製冰　❄</button>`;
+      document.getElementById("start").onclick=startQuiz;
+    } else {
+      const t=setTimeout(()=>playScene(i+1), 1700);
+      introTimers.push(()=>clearTimeout(t));
+    }
+  });
+  // 點畫面可提前進入下一幕
+  stage.onclick=()=>{ if(!SCENES[i].cta){ clearIntro(); playScene(i+1); } };
+}
+/* ---------- 底部固定列 ---------- */
+function trayHtml(mode){
+  const need = mode==="must"?5:4;
+  const picked = mode==="must"?state.must:state.ban;
+  const done = picked.length>=need, left=need-picked.length;
+  let visual;
+  if(mode==="must"){
+    const chips = state.must.map((id,i)=>{
+      const [x,y]=MOUND[i]||[50,50];
+      return `<div class="bt" style="left:${x}%;top:${y}%">${ART[id]||""}</div>`;
+    }).join("");
+    visual = `<div class="tray-bowl">${bowlSvg()}<div class="bowl-toppings">${chips}</div></div>`;
+  } else {
+    const chips = state.ban.map(id=>`<div class="mb">${ART[id]||""}</div>`).join("");
+    visual = `<div class="tray-ban">${chips||'<span class="none">🚫</span>'}</div>`;
+  }
+  const txt = done
+    ? `<b>${picked.length}</b><span>／${need}　${mode==="must"?"這碗成形了":"名單收齊了"}</span>`
+    : `<b>${picked.length}</b><span>／${need}　${mode==="must"?"再挑 "+left+" 樣放上冰":"再挑 "+left+" 樣"}</span>`;
+  const ctaTxt = done ? (mode==="must"?"下一步":"看結果") : "還沒好";
+  return `<div class="tray-inner">${visual}
+    <div class="tray-txt">${txt}</div>
+    <button class="wc-cta ${done?"ready":""}" id="cta" ${done?"":"disabled"}>${ctaTxt}</button></div>`;
+}
+
+/* ---------- 選擇畫面 ---------- */
+function mountSelect(mode){
+  curCat="all";
+  const need = mode==="must"?5:4;
+  const picked = mode==="must"?state.must:state.ban;
+  const stepNo = mode==="must"?"01":"02";
+  const stepName = mode==="must"?"必吃 · 靈魂配料":"拒吃 · 地雷名單";
+  const stepSub = mode==="must"?"選 5 樣你吃冰不能沒有的靈魂配料":"選 4 樣打死都不想在碗裡遇到的配料";
+  const pct = Math.round(picked.length/need*100);
+
+  app.innerHTML=`
+    <header class="mast">
+      <div class="mast-kicker">刨 冰 人 格 學</div>
+      <h1 class="mast-title">挑一碗，像你的冰</h1>
+      <div class="mast-rule"><span class="seal-mark">冰</span></div>
+    </header>
+    <div class="step-head">
+      <div class="step-line"><span class="step-no">${stepNo}</span><span class="step-name">${stepName}</span></div>
+      <div class="step-sub">${stepSub}</div>
+      <div class="progress-line"><i style="width:${pct}%"></i></div>
+    </div>
+    <nav class="cat-tabs">${tabsHtml(mode)}</nav>
+    <div class="pick-grid">${gridHtml(mode)}</div>
+    <div class="tray-bar">${trayHtml(mode)}</div>`;
+
+  bindTabs(mode); bindTiles(mode); bindCta(mode);
+}
+function bindTabs(mode){
+  app.querySelectorAll(".cat-tab").forEach(b=>b.onclick=()=>{
+    curCat=b.dataset.cat;
+    app.querySelector(".pick-grid").innerHTML=gridHtml(mode);
+    app.querySelectorAll(".cat-tab").forEach(x=>x.classList.toggle("is-on",x.dataset.cat===curCat));
+    bindTiles(mode);
+  });
+}
+function bindTiles(mode){
+  app.querySelectorAll(".tile[data-id]").forEach(t=>t.onclick=()=>onPick(mode,+t.dataset.id));
+}
+function bindCta(mode){
+  const cta=document.getElementById("cta");
+  if(cta) cta.onclick=()=>{ if(cta.disabled) return; state.screen=mode==="must"?"step2":"result"; render(); window.scrollTo(0,0); };
+}
+
+function onPick(mode,id){
+  const arr = mode==="must"?state.must:state.ban;
+  const need = mode==="must"?5:4;
+  const i = arr.indexOf(id);
+  if(i>=0){ arr.splice(i,1); }
+  else{ if(arr.length>=need){ flashFull(); return; } arr.push(id); }
+  refreshPick(mode);
+}
+function refreshPick(mode){
+  const need = mode==="must"?5:4;
+  const picked = mode==="must"?state.must:state.ban;
+  app.querySelectorAll(".tile[data-id]").forEach(t=>{
+    if(picked.includes(+t.dataset.id)) t.setAttribute("data-picked",mode);
+    else t.removeAttribute("data-picked");
+  });
+  const nav=app.querySelector(".cat-tabs"); if(nav){ nav.innerHTML=tabsHtml(mode); bindTabs(mode); }
+  const pb=app.querySelector(".progress-line i"); if(pb) pb.style.width=Math.round(picked.length/need*100)+"%";
+  const tb=app.querySelector(".tray-bar"); if(tb){ tb.innerHTML=trayHtml(mode); bindCta(mode); }
+}
+let flashT;
+function flashFull(){
+  const c=app.querySelector(".tray-txt b");
+  if(!c) return;
+  c.style.transition="transform .12s"; c.style.transform="scale(1.3)";
+  clearTimeout(flashT); flashT=setTimeout(()=>{c.style.transform="scale(1)";},150);
+}
+
+/* ============ 人格判定邏輯 ============ */
+const PERSONA={
+  chewy:{name:"Q彈行動派", tagline:"想到就做，喜歡就大口咬下",
+    desc:"你是行動派。喜歡的東西會立刻抓進碗裡，不喜歡拖。比起想太多，你更相信先做再說，這份行動力就是身邊人最羨慕你的地方。"},
+  bean:{name:"溫吞老靈魂", tagline:"踏實穩重，在乎的是本質",
+    desc:"你踏實、穩重，不太受潮流影響。你在乎事物的本質，也珍惜熟悉的安全感，是朋友眼中最可靠的那一個。"},
+  produce:{name:"天然純粹派", tagline:"最好的，往往最單純",
+    desc:"你喜歡真材實料，討厭虛假包裝。你重視生活品質，活得坦率不做作，相信最好的東西通常也最單純。"},
+  jelly:{name:"透明佛系人", tagline:"隨遇而安，能不麻煩就不麻煩",
+    desc:"你隨遇而安、不太計較，走到哪都自在。你圓滑好相處，是朋友圈裡的和平使者，凡事以不勉強為原則。"},
+  sauce:{name:"放縱童心派", tagline:"人生苦短，快樂要及時",
+    desc:"你喜歡甜、也喜歡放縱，還保有一份童心。你認為人生苦短、快樂要及時，總能把每一口都吃成小確幸。"},
+  curious:{name:"貪心好奇寶寶", tagline:"什麼都想試一點",
+    desc:"你什麼都想試一點。好奇心旺盛，也常有選擇障礙，因為你不想錯過任何一種可能，永遠都想再嘗一口。"},
+};
+const SUBTAG={
+  chewy:{name:"效率大師", desc:"你追求效率，能躺就不坐，最受不了費工又內耗的麻煩事。"},
+  bean:{name:"創新玩家", desc:"你受不了一成不變，喜歡新鮮感，總在找下一個沒試過的東西。"},
+  produce:{name:"享樂主義", desc:"你比起健康更在乎當下的爽度，該享受的時候絕不虧待自己。"},
+  none:{name:"海納百川", desc:"你幾乎沒有地雷，很好相處，跟你一起吃飯特別輕鬆。"},
+};
+function catCounts(ids){
+  const c={sauce:0,bean:0,chewy:0,jelly:0,produce:0};
+  ids.forEach(id=>{ const t=byId(id); if(t) c[t.cat]++; });
+  return c;
+}
+function mainPersona(must){
+  const c=catCounts(must);
+  const distinct=Object.values(c).filter(n=>n>0).length;
+  if(distinct===5) return PERSONA.curious;
+  const order=["chewy","sauce","bean","produce","jelly"]; // 同票優先序
+  let best=order[0];
+  order.forEach(k=>{ if(c[k]>c[best]) best=k; });
+  return PERSONA[best];
+}
+function subTag(ban){
+  const c=catCounts(ban);
+  if(c.chewy>=2) return SUBTAG.chewy;
+  if(c.bean>=2) return SUBTAG.bean;
+  if(c.produce>=2) return SUBTAG.produce;
+  return SUBTAG.none;
+}
+
+/* ============ 冰友代碼（4 碼英數）============
+   純前端無後端，代碼需自帶資料。契合度只看必吃重疊，故只編碼 5 樣必吃：
+   把「27 選 5」用組合數系統壓成一個序號（0…80729），再轉 4 碼 base36。 */
+const CODE_N=27, CODE_K=5;
+function nCr(n,r){ if(r<0||r>n) return 0; r=Math.min(r,n-r); let v=1; for(let i=0;i<r;i++) v=v*(n-i)/(i+1); return Math.round(v); }
+const COMBO_MAX=nCr(CODE_N,CODE_K); // 80730
+function makeCode(){
+  const combo=[...state.must].sort((a,b)=>a-b);
+  let rank=0; combo.forEach((c,j)=>{ rank+=nCr(c, j+1); });
+  return rank.toString(36).toUpperCase().padStart(4,"0");
+}
+function decodeCode(str){
+  const s=String(str).trim().replace(/\s+/g,"").toLowerCase();
+  if(!/^[0-9a-z]{4}$/.test(s)) return null;
+  const rank=parseInt(s,36);
+  if(!Number.isInteger(rank) || rank<0 || rank>=COMBO_MAX) return null;
+  let r=rank; const combo=new Array(CODE_K);
+  for(let j=CODE_K;j>=1;j--){ let a=j-1; while(nCr(a+1,j)<=r) a++; combo[j-1]=a; r-=nCr(a,j); }
+  if(combo.some(i=>i<0||i>26) || new Set(combo).size!==CODE_K) return null;
+  return {must:combo};
+}
+
+/* ============ 單人結果頁 ============ */
+function miniList(ids,off){
+  return ids.map(id=>{const t=byId(id);return `<span class="rs-item ${off?"off":""}">${ART[id]||""}<small>${t.name}</small></span>`;}).join("");
+}
+function mountResult(){
+  const p=mainPersona(state.must), s=subTag(state.ban), code=makeCode();
+  app.innerHTML=`
+    <header class="mast">
+      <div class="mast-kicker">你 的 刨 冰 人 格</div>
+      <div class="mast-rule"><span class="seal-mark">冰</span></div>
+    </header>
+    <div class="result">
+      <div class="res-bowl">${filledBowl(state.must,220)}</div>
+      <div class="res-name">${p.name}</div>
+      <div class="res-tag">「${p.tagline}」</div>
+      <div><span class="res-sub">隱藏標籤 × ${s.name}</span></div>
+      <p class="res-desc">${p.desc}</p>
+      <div class="res-subdesc"><b>${s.name}</b>　${s.desc}</div>
+      <div class="res-summary">
+        <div class="rs-row"><span class="rs-k">必加</span>${miniList(state.must)}</div>
+        <div class="rs-row"><span class="rs-k ban">不加</span>${miniList(state.ban,true)}</div>
+      </div>
+      <div class="code-card">
+        <div class="code-label">你 的 冰 友 代 碼</div>
+        <div class="code-val" id="code">${code}</div>
+        <button class="code-copy" id="copy">複製代碼</button>
+        <div class="code-hint">把代碼傳給另一半，或輸入對方的代碼，<br>測出你們一起吃這碗冰的契合度。</div>
+      </div>
+      <div class="res-actions">
+        <button class="wc-cta ready" id="toCompat">輸入伴侶代碼，看契合度 →</button>
+        <button class="ghost-btn" id="invite">複製邀請訊息</button>
+      </div>
+      <button class="ghost-btn small" id="restart">重玩一次</button>
+    </div>`;
+
+  const copyBtn=document.getElementById("copy");
+  copyBtn.onclick=()=>copyText(code, copyBtn, "複製代碼");
+  document.getElementById("invite").onclick=(e)=>{
+    const msg=`我的刨冰人格是「${p.name}」🍧 來測測我們一起吃冰的契合度～ 我的冰友代碼：${code}`;
+    copyText(msg, e.currentTarget, "複製邀請訊息", "已複製訊息 ✓");
+  };
+  document.getElementById("toCompat").onclick=()=>{ state.screen="compat"; render(); window.scrollTo(0,0); };
+  document.getElementById("restart").onclick=()=>{ state.must=[]; state.ban=[]; state.screen="step1"; render(); window.scrollTo(0,0); };
+}
+function copyText(text, btn, orig, doneTxt){
+  const done=doneTxt||"已複製 ✓";
+  const ok=()=>{ btn.textContent=done; btn.classList.add("done"); setTimeout(()=>{ btn.textContent=orig; btn.classList.remove("done"); },1600); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
+  else{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} ta.remove(); ok(); }
+}
+
+/* ============ 雙人契合度 ============ */
+const COMPAT={
+  soul:{name:"靈魂伴侶", range:"必吃重疊 4–5 樣",
+    desc:"你們的口味幾乎一致。各自一碗擺在一起，也像同一碗。這種同步很難得，好好珍惜。"},
+  complement:{name:"完美互補", range:"必吃重疊 2–3 樣",
+    desc:"你們有一部分口味相同，也各自保有堅持。各自一碗、偶爾交換一口，有共識又不無聊，剛剛好。"},
+  solo:{name:"各自美麗", range:"必吃重疊 0–1 樣",
+    desc:"你們的口味很不一樣，但這不是問題。各自點一碗、各自喜歡，偶爾交換一口，反而能一起吃到更多。"},
+};
+const compatLevel=n=> n>=4?COMPAT.soul : n>=2?COMPAT.complement : COMPAT.solo;
+
+function mountCompat(){
+  app.innerHTML=`
+    <header class="mast">
+      <div class="mast-kicker">雙 人 契 合 度</div>
+      <h1 class="mast-title">你們，合吃一碗嗎？</h1>
+      <div class="mast-rule"><span class="seal-mark">冰</span></div>
+    </header>
+    <div class="result">
+      <p class="res-desc" style="text-align:center">輸入另一半的「冰友代碼」，<br>看看你們一起吃這碗冰有多合拍。</p>
+      <div class="code-input">
+        <input id="codeIn" type="text" placeholder="XXXX" autocomplete="off" autocapitalize="characters" maxlength="4">
+        <div class="code-err" id="err"></div>
+      </div>
+      <div class="res-actions">
+        <button class="wc-cta ready" id="go">看契合度 →</button>
+        <button class="ghost-btn small" id="back">← 回我的結果</button>
+      </div>
+    </div>`;
+  const inp=document.getElementById("codeIn"), err=document.getElementById("err");
+  inp.oninput=()=>{ err.textContent=""; };
+  const submit=()=>{
+    const partner=decodeCode(inp.value);
+    if(!partner){ err.textContent="這個代碼看起來怪怪的，再確認一下唷～"; inp.classList.add("shake"); setTimeout(()=>inp.classList.remove("shake"),400); return; }
+    mountCompatResult(partner); window.scrollTo(0,0);
+  };
+  document.getElementById("go").onclick=submit;
+  inp.onkeydown=e=>{ if(e.key==="Enter") submit(); };
+  document.getElementById("back").onclick=()=>{ state.screen="result"; render(); window.scrollTo(0,0); };
+  inp.focus();
+}
+function mountCompatResult(partner){
+  const shared=state.must.filter(id=>partner.must.includes(id));
+  const n=shared.length, lvl=compatLevel(n);
+  const mine=mainPersona(state.must), theirs=mainPersona(partner.must);
+  // 代碼只帶必吃，故只看得到「對方的最愛正好在你的地雷名單上」這一向
+  const landmines=[...new Set(partner.must.filter(id=>state.ban.includes(id)))];
+  const meter=`${"●".repeat(n)}${"○".repeat(5-n)}<b>${n} / 5</b>`;
+  const sharedBlock = n
+    ? `<div class="res-summary"><div class="rs-row"><span class="rs-k" style="color:var(--accent)">共同</span>${miniList(shared)}</div></div>`
+    : `<div class="res-subdesc" style="text-align:center">你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多 🍧</div>`;
+  const landmineBlock = landmines.length
+    ? `<div class="landmine"><b>貼心提醒</b>　${landmines.map(id=>byId(id).name).join("、")} 是對方的最愛，卻在你的地雷名單上。剛好各自一碗，誰都不用勉強自己 😌</div>`
+    : "";
+  app.innerHTML=`
+    <header class="mast">
+      <div class="mast-kicker">雙 人 契 合 度</div>
+      <div class="mast-rule"><span class="seal-mark">冰</span></div>
+    </header>
+    <div class="result">
+      <div class="compat-hero">
+        <div class="ch-bowls">
+          <div class="chb"><div class="chb-bowl">${bowlWithToppings(state.must)}</div><span>${mine.name}</span></div>
+          <div class="chb-vs">×</div>
+          <div class="chb"><div class="chb-bowl">${bowlWithToppings(partner.must)}</div><span>${theirs.name}</span></div>
+        </div>
+        <div class="ch-level">${lvl.name}</div>
+        <div class="ch-range">${lvl.range}</div>
+        <div class="ch-meter">${meter}</div>
+      </div>
+      <p class="res-desc" style="text-align:center">${lvl.desc}</p>
+      ${sharedBlock}
+      ${landmineBlock}
+      <div class="res-actions">
+        <button class="wc-cta ready" id="again">換一個代碼再測</button>
+        <button class="ghost-btn" id="back">← 回我的結果</button>
+      </div>
+    </div>`;
+  document.getElementById("again").onclick=()=>{ state.screen="compat"; render(); window.scrollTo(0,0); };
+  document.getElementById("back").onclick=()=>{ state.screen="result"; render(); window.scrollTo(0,0); };
+}
+
+render();
+</script>
+</body>
+</html>
