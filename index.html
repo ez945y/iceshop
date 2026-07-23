@@ -18,7 +18,13 @@
   --seal:#bb3b2e;     /* 印章紅 */
   --shadow:0 14px 34px rgba(70,55,35,.12);
   --shadow-sm:0 4px 14px rgba(70,55,35,.1);
+  --shadow-lift:0 10px 24px rgba(70,55,35,.16);
   --radius:14px;
+  /* 動態語彙：出場沉穩、選取帶一點回彈 */
+  --ease-out:cubic-bezier(.22,.61,.36,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --dur:.22s;
+  --grain-op:.045;
   --font:"Noto Sans TC","PingFang TC",system-ui,sans-serif;
   --font-brush:"LXGW WenKai TC","Noto Serif TC","PingFang TC",serif;
 }
@@ -28,6 +34,8 @@
     --ink:#ece3d2; --ink-soft:#a99f8c; --line:rgba(236,227,210,.14);
     --accent:#d47a5a; --accent-2:#d6ad5e; --good:#98a479; --seal:#d6614f;
     --shadow:0 14px 34px rgba(0,0,0,.45);
+    --shadow-lift:0 12px 28px rgba(0,0,0,.5);
+    --grain-op:.06;
   }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -44,12 +52,17 @@ body{
 
 /* ---------- 刊頭 ---------- */
 .mast{text-align:center; padding:2px 0 6px}
-.mast-kicker{font-size:11px; letter-spacing:5px; color:var(--ink-soft)}
+.mast-kicker{font-size:11px; letter-spacing:5px; color:var(--ink-soft); display:inline-block}
+.mast-kicker::before,.mast-kicker::after{content:""; display:inline-block; width:14px; height:1px;
+  background:var(--line); vertical-align:middle; margin:0 11px 2px}
 .mast-title{font-family:var(--font-brush); font-weight:700; font-size:30px; color:var(--ink); margin:7px 0 10px; letter-spacing:3px}
 .mast-rule{display:flex; align-items:center; justify-content:center; gap:14px}
-.mast-rule::before,.mast-rule::after{content:""; height:1px; width:66px; background:var(--line)}
+.mast-rule::before,.mast-rule::after{content:""; height:1px; width:66px;
+  background:linear-gradient(90deg, transparent, var(--line) 30%, var(--line) 70%, transparent)}
 .seal-mark{width:30px; height:30px; border:1.5px solid var(--seal); color:var(--seal); border-radius:7px;
-  display:flex; align-items:center; justify-content:center; font-family:var(--font-brush); font-size:17px; transform:rotate(-4deg)}
+  display:flex; align-items:center; justify-content:center; font-family:var(--font-brush); font-size:17px; transform:rotate(-4deg);
+  background:radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--seal) 9%, transparent), transparent 70%);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--seal) 18%, transparent), 0 1px 1px rgba(0,0,0,.05)}
 
 /* ---------- 步驟標頭 ---------- */
 .step-head{margin:14px 2px 12px}
@@ -58,7 +71,9 @@ body{
 .step-name{font-size:16px; font-weight:700; letter-spacing:1.5px; color:var(--ink)}
 .step-sub{font-size:13px; color:var(--ink-soft); margin:6px 0 11px; letter-spacing:.3px}
 .progress-line{height:3px; background:var(--line); border-radius:3px; overflow:hidden}
-.progress-line i{display:block; height:100%; background:var(--accent); border-radius:3px; transition:width .35s ease}
+.progress-line i{display:block; height:100%; border-radius:3px; transition:width .45s var(--ease-out);
+  background:linear-gradient(90deg, color-mix(in srgb, var(--accent) 72%, transparent), var(--accent));
+  box-shadow:0 0 7px color-mix(in srgb, var(--accent) 45%, transparent)}
 
 /* ---------- 分類籤 ---------- */
 .cat-tabs{display:flex; gap:2px; overflow-x:auto; padding:2px 0 12px; margin:0 -2px; scrollbar-width:none}
@@ -66,8 +81,11 @@ body{
 .cat-tab{flex:0 0 auto; border:none; background:none; font-family:inherit; cursor:pointer;
   color:var(--ink-soft); font-size:14px; letter-spacing:1px; padding:6px 11px 9px; position:relative; white-space:nowrap;}
 .cat-tab .cc{font-size:11px; color:var(--accent); margin-left:4px; font-variant-numeric:tabular-nums; font-weight:700}
+.cat-tab{transition:color var(--dur) var(--ease-out)}
 .cat-tab.is-on{color:var(--ink); font-weight:700}
-.cat-tab.is-on::after{content:""; position:absolute; left:11px; right:11px; bottom:3px; height:2px; background:var(--accent); border-radius:2px}
+.cat-tab.is-on::after{content:""; position:absolute; left:11px; right:11px; bottom:3px; height:2px; background:var(--accent); border-radius:2px;
+  transform-origin:center; animation:tabUnderline .28s var(--ease-out)}
+@keyframes tabUnderline{from{transform:scaleX(.2); opacity:0}to{transform:scaleX(1); opacity:1}}
 
 /* ---------- 配料卡 ---------- */
 .pick-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:11px;}
@@ -75,8 +93,11 @@ body{
 @media(max-width:330px){ .pick-grid{grid-template-columns:repeat(2,1fr)} }
 .tile{position:relative; cursor:pointer; border:1px solid var(--line); background:var(--card);
   border-radius:12px; padding:11px 6px 9px; font-family:inherit; text-align:center;
-  transition:transform .12s, border-color .15s, box-shadow .15s; box-shadow:var(--shadow-sm);}
-.tile:active{transform:scale(.96)}
+  transition:transform var(--dur) var(--ease-out), border-color var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+  box-shadow:var(--shadow-sm);}
+.tile:active{transform:scale(.95)}
+.tile .food svg{transition:transform var(--dur) var(--ease-spring)}
+.tile[data-picked] .food svg{transform:scale(1.06)}
 .tile .food{position:relative; height:54px; width:62px; margin:2px auto 7px;}
 .tile .food::before{content:""; position:absolute; inset:2px 0 -2px; border-radius:50%;
   background:radial-gradient(circle at 50% 55%, rgba(60,55,46,.07), transparent 68%);}
@@ -86,11 +107,18 @@ body{
 .tile .seal{position:absolute; top:6px; right:6px; width:21px; height:21px; border-radius:6px;
   display:none; align-items:center; justify-content:center; color:#fff; font-size:12px; font-weight:700;
   font-family:var(--font-brush); transform:rotate(-6deg); box-shadow:0 2px 4px rgba(0,0,0,.22)}
-.tile[data-picked] .seal{display:flex}
-.tile[data-picked="must"]{border-color:var(--good); box-shadow:0 0 0 1.5px var(--good), var(--shadow-sm); background:linear-gradient(180deg,#f6f8ef,var(--card))}
+.tile[data-picked] .seal{display:flex; animation:stamp .34s var(--ease-spring)}
+@keyframes stamp{
+  0%{transform:rotate(-16deg) scale(1.9); opacity:0}
+  45%{opacity:1}
+  62%{transform:rotate(-6deg) scale(.82)}
+  100%{transform:rotate(-6deg) scale(1)}}
+.tile[data-picked="must"]{border-color:var(--good); box-shadow:0 0 0 1.5px var(--good), var(--shadow-lift);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--good) 12%, var(--card)), var(--card))}
 .tile[data-picked="must"] .seal{background:var(--good)}
-.tile[data-picked="ban"]{border-color:var(--seal); box-shadow:0 0 0 1.5px var(--seal), var(--shadow-sm)}
-.tile[data-picked="ban"] .food{filter:grayscale(.5) opacity(.6)}
+.tile[data-picked="ban"]{border-color:var(--seal); box-shadow:0 0 0 1.5px var(--seal), var(--shadow-lift);
+  background:linear-gradient(180deg, color-mix(in srgb, var(--seal) 9%, var(--card)), var(--card))}
+.tile[data-picked="ban"] .food{filter:grayscale(.5) opacity(.6); transition:filter var(--dur) var(--ease-out)}
 .tile[data-picked="ban"] .seal{background:var(--seal)}
 
 /* ================= 底部固定列：你的碗 + 進度 + 下一步 ================= */
@@ -243,6 +271,91 @@ body{
   .tray-txt b{font-size:20px}
   .wc-cta{font-size:14px; padding:11px 16px}
 }
+
+/* ================= 設計語言強化：材質 · 節奏 · 微互動 ================= */
+/* 紙張顆粒：極淡的雜訊層，鋪在內容「之下」（z-index:-1），純疊加、不用 mix-blend-mode，
+   避免 iOS Safari 對「fixed 全螢幕 + 混合模式」圖層的合成錯誤（會把動畫幕跑版）。 */
+body::before{content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  opacity:var(--grain-op);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:160px 160px}
+
+/* 配料卡：進場時逐張輕輕浮起（backwards，結束後不佔用 transform，press/hover 照常） */
+@keyframes tileIn{from{opacity:0; transform:translateY(10px)}to{opacity:1; transform:none}}
+.pick-grid .tile{animation:tileIn .42s var(--ease-out) backwards}
+.pick-grid .tile:nth-child(1){animation-delay:.02s}
+.pick-grid .tile:nth-child(2){animation-delay:.05s}
+.pick-grid .tile:nth-child(3){animation-delay:.08s}
+.pick-grid .tile:nth-child(4){animation-delay:.11s}
+.pick-grid .tile:nth-child(5){animation-delay:.13s}
+.pick-grid .tile:nth-child(6){animation-delay:.15s}
+.pick-grid .tile:nth-child(7){animation-delay:.17s}
+.pick-grid .tile:nth-child(8){animation-delay:.19s}
+.pick-grid .tile:nth-child(9){animation-delay:.20s}
+.pick-grid .tile:nth-child(10){animation-delay:.21s}
+.pick-grid .tile:nth-child(11){animation-delay:.22s}
+.pick-grid .tile:nth-child(n+12){animation-delay:.23s}
+
+/* 結果頁：內容分層淡入，讀起來像一頁一頁翻開 */
+@keyframes revealUp{from{opacity:0; transform:translateY(14px)}to{opacity:1; transform:none}}
+.result>*{animation:revealUp .5s var(--ease-out) backwards}
+.result>*:nth-child(1){animation-delay:.04s}
+.result>*:nth-child(2){animation-delay:.10s}
+.result>*:nth-child(3){animation-delay:.16s}
+.result>*:nth-child(4){animation-delay:.22s}
+.result>*:nth-child(5){animation-delay:.27s}
+.result>*:nth-child(6){animation-delay:.31s}
+.result>*:nth-child(7){animation-delay:.35s}
+.result>*:nth-child(8){animation-delay:.38s}
+.result>*:nth-child(n+9){animation-delay:.41s}
+
+/* 底部托盤：加一道內側高光，像一張浮起的紙 */
+.tray-inner{box-shadow:var(--shadow), inset 0 1px 0 color-mix(in srgb, #fff 40%, transparent)}
+
+/* 指標裝置（桌機/觸控板）才給的 hover 反饋；觸控裝置不受影響 */
+@media(hover:hover){
+  .tile:hover:not(:active){border-color:color-mix(in srgb, var(--accent) 55%, var(--line)); transform:translateY(-2px); box-shadow:var(--shadow-lift)}
+  .cat-tab:hover{color:var(--ink)}
+  .wc-cta.ready:hover{filter:brightness(1.05)}
+  .wc-cta:not(:disabled):hover{transform:translateY(-1px)}
+  .ghost-btn:hover{border-color:color-mix(in srgb, var(--accent) 50%, var(--line)); color:var(--accent)}
+  .code-copy:hover{background:var(--accent); border-color:var(--accent); color:#fff}
+  .res-sub{transition:border-color var(--dur) var(--ease-out)}
+  .res-sub:hover{border-color:color-mix(in srgb, var(--accent) 45%, var(--line))}
+}
+
+/* 鍵盤焦點：一致的琥珀色描邊，取代瀏覽器預設藍框 */
+:where(button,input,.tile):focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+:where(button,input,.tile):focus:not(:focus-visible){outline:none}
+
+/* 尊重系統「減少動態」設定 */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important}
+}
+
+/* ---------- 契合度：兩排必吃對照（相同的排前面、亮起來） ---------- */
+.cmp-head{font-size:13px; letter-spacing:2px; color:var(--ink-soft); text-align:center; margin:18px 0 4px}
+.res-summary.cmp{margin:2px 0 4px}
+.res-summary.cmp .rs-k.mine{color:var(--ink); font-weight:700}
+.res-summary.cmp .rs-item{padding:5px 3px 4px; border-radius:12px; transition:background var(--dur) var(--ease-out)}
+.res-summary.cmp .rs-item.match{background:linear-gradient(180deg, color-mix(in srgb,var(--accent) 18%, transparent), color-mix(in srgb,var(--accent) 4%, transparent))}
+.res-summary.cmp .rs-item.match small{color:var(--accent); font-weight:700}
+.cmp-note{font-size:12px; color:var(--ink-soft); text-align:center; letter-spacing:.5px; margin:2px 0 18px}
+
+/* ---------- 「這是什麼」說明浮層 ---------- */
+.explainer{position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+  padding:22px; background:rgba(30,24,14,.5); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+  opacity:0; transition:opacity .2s var(--ease-out)}
+.explainer.on{opacity:1}
+.exp-card{max-width:380px; width:100%; background:var(--paper); border:1px solid var(--line); border-radius:20px;
+  padding:26px 24px 22px; box-shadow:var(--shadow); text-align:center;
+  transform:translateY(12px) scale(.98); transition:transform .24s var(--ease-spring)}
+.explainer.on .exp-card{transform:none}
+.exp-kicker{font-size:11px; letter-spacing:4px; color:var(--ink-soft)}
+.exp-title{font-family:var(--font-brush); font-weight:700; font-size:23px; color:var(--ink); letter-spacing:2px; margin:8px 0 14px}
+.exp-p{font-size:14px; line-height:2; color:var(--ink); letter-spacing:.3px; text-align:justify; margin:0 0 12px}
+.exp-p b{color:var(--accent); font-weight:700}
+.exp-card .wc-cta{width:100%; margin-top:6px; padding:13px}
 </style>
 </head>
 <body>
@@ -436,7 +549,7 @@ function iceIconSvg(color){ color=color||"currentColor";
 const byId=id=>TOPPINGS[id];
 
 /* ============ 應用狀態 & 路由 ============ */
-const state={screen:"intro", nickname:"", must:[], ban:[], pairMode:false, p1:null};
+const state={screen:"intro", nickname:"", must:[], ban:[], pairMode:false, p1:null, invite:null, inviteCode:null};
 const app=document.getElementById("app");
 // 冰山上的堆疊座標（%）
 const MOUND=[[42,40],[59,37],[35,52],[66,50],[50,58]];
@@ -630,14 +743,14 @@ function mountSelect(mode){
   const stepSub = mode==="must"?"選 5 樣你吃冰不能沒有的靈魂配料":"選 4 樣打死都不想在碗裡遇到的配料";
   const pct = Math.round(picked.length/need*100);
 
-  const fp = state.pairMode && state.p1;   // 正在幫另一半測
+  // 第二輪（幫對方測）刻意不顯示任何「換他挑一碗」之類的提示文案，
+  // 讓對方就當成一份普通測驗完成即可；契合度由雙方的選擇直接算出（見 finishPartnerRound）。
   app.innerHTML=`
     <header class="mast">
-      <div class="mast-kicker">${fp?"幫 另 一 半 測":"刨 冰 人 格 學"}</div>
-      <h1 class="mast-title">${fp?"換他挑一碗":"挑一碗，像你的冰"}</h1>
+      <div class="mast-kicker">刨 冰 人 格 學</div>
+      <h1 class="mast-title">挑一碗，像你的冰</h1>
       <div class="mast-rule"><span class="seal-mark">冰</span></div>
     </header>
-    ${fp?'<div style="margin:2px 16px 10px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center">你的結果已存起來，換對方選完就直接看你們的契合度'+iceIconSvg()+'</div>':""}
     <div class="step-head">
       <div class="step-line"><span class="step-no">${stepNo}</span><span class="step-name">${stepName}</span></div>
       <div class="step-sub">${stepSub}</div>
@@ -846,6 +959,7 @@ function mountResult(){
       <div class="res-name">${p.name}</div>
       <div class="res-tag">「${p.tagline}」</div>
       <div class="res-subs">${tags.map(t=>`<span class="res-sub">${t.name}</span>`).join("")}</div>
+      ${state.invite?`<button class="wc-cta ready" id="seeInvite" style="width:100%;max-width:320px;margin:16px auto 4px">看你和邀請人的契合度 →</button>`:""}
       <p class="res-desc">${personaReason(state.must)}</p>
       ${tags.map(t=>`<div class="res-subdesc"><b>${t.name}</b>　${t.reason}</div>`).join("")}
       <div class="res-summary">
@@ -863,6 +977,7 @@ function mountResult(){
         <button class="ghost-btn" id="forPartner">接著幫對方測，看契合度 →</button>
       </div>
       <button class="ghost-btn small" id="toCompat">我有對方的代碼</button>
+      <button class="ghost-btn small" id="whatis">這是什麼測驗？</button>
       <button class="ghost-btn small" id="restart">重新測一次</button>
       <div class="credit">概念發想　<b>Emily</b>　×　設計實作　<b>Mike</b></div>
     </div>`;
@@ -873,7 +988,10 @@ function mountResult(){
   document.getElementById("share").onclick=(e)=>shareInvite(p, code, e.currentTarget);
   document.getElementById("forPartner").onclick=()=>startPartnerRound();
   document.getElementById("toCompat").onclick=()=>{ state.screen="compat"; render(); window.scrollTo(0,0); };
+  document.getElementById("whatis").onclick=showExplainer;
   document.getElementById("restart").onclick=()=>{ resetAll(); state.screen="step1"; render(); window.scrollTo(0,0); };
+  const invBtn=document.getElementById("seeInvite");
+  if(invBtn) invBtn.onclick=()=>{ window.scrollTo(0,0); mountCompatResult(state.invite); };
 }
 function copyText(text, btn, orig, doneTxt){
   const done=doneTxt||"已複製 ✓";
@@ -895,13 +1013,15 @@ function primeCard(code){
 // 分享：手機叫出原生分享面板（LINE / Threads / IG…都在裡面），桌機退回下載圖＋複製文字。
 async function shareInvite(p, code, btn){
   const orig=btn.textContent;
-  const url = /^https?:/.test(location.origin) ? location.href.split("#")[0] : "";
-  const text = `我的刨冰人格是「${p.name}」。來測測我們一起吃冰的契合度，刨冰代碼：${code}`;
-  // 1) 手機原生分享：用「已備好」的圖，點擊當下不 await 產圖，保住使用者手勢。
+  // 邀請連結：帶上代碼（#i=CODE），對方打開做完測驗就能直接看你們的契合度。
+  const base = /^https?:/.test(location.origin) ? location.href.split("#")[0] : "";
+  const url = base ? base + "#i=" + code : "";
+  const text = `我的刨冰人格是「${p.name}」。點連結測我們一起吃冰的契合度，刨冰代碼：${code}`;
+  // 1) 手機原生分享：圖 + 邀請文字 + 連結一起送出（用「已備好」的圖，保住使用者手勢）。
   if(navigator.share){
-    const file=cardFileReady;   // 可能還在產（使用者秒點）→ 就先只分享文字，仍是原生面板
+    const file=cardFileReady;   // 可能還在產（使用者秒點）→ 就先只分享文字＋連結，仍是原生面板
     const canFile = file && navigator.canShare && navigator.canShare({files:[file]});
-    const payload = canFile ? {files:[file], text}
+    const payload = canFile ? (url ? {files:[file], text, url} : {files:[file], text})
                             : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
     try{ await navigator.share(payload); return; }
     catch(err){ if(err && err.name==="AbortError") return; /* 其它錯誤 → 掉到下方退路 */ }
@@ -1164,19 +1284,24 @@ async function compatCardBlob(partner){
   // 描述
   y+=52; ctx.textAlign="left"; ctx.font='400 34px "Noto Sans TC",sans-serif'; ctx.fillStyle="#3c372e";
   y=para(wrapText(ctx,lvl.desc,CW), LX, y+24, 54)+10;
-  // 共同必吃 或「沒有相同」
-  if(n){
-    ctx.textAlign="left"; ctx.fillStyle="#b45c3f"; ctx.font='700 30px "Noto Sans TC",sans-serif'; ctx.fillText(`共同必吃 · ${n} 樣`, LX, y); y+=44;
-    const slot=CW/n, ic=80;
-    for(let i=0;i<n;i++){ const t=byId(shared[i]), art=ART[shared[i]], scx=LX+(i+0.5)*slot;
+  // 各自的必吃：兩排對照（相同的排前面、亮底）
+  const sharedSet=new Set(shared);
+  const ord=ids=>[...ids.filter(id=>sharedSet.has(id)), ...ids.filter(id=>!sharedSet.has(id))];
+  const drawCmpRow=async(label, ids)=>{
+    ctx.textAlign="left"; ctx.fillStyle="#8b8171"; ctx.font='700 28px "Noto Sans TC",sans-serif'; ctx.fillText(label, LX, y+6); y+=38;
+    const arr=ord(ids), slot=CW/5, ic=78;
+    for(let i=0;i<arr.length;i++){ const id=arr[i], t=byId(id), art=ART[id], on=sharedSet.has(id), scx=LX+(i+0.5)*slot;
+      if(on){ ctx.fillStyle="rgba(180,92,63,.13)"; roundRect(ctx, scx-slot/2+6, y-6, slot-12, ic+42, 16); ctx.fill(); }
       if(art){ const im=await svgToImage(art, ic*2, ic*2); ctx.drawImage(im, scx-ic/2, y, ic, ic); }
-      ctx.textAlign="center"; ctx.fillStyle="#3c372e"; ctx.font='400 26px "Noto Sans TC",sans-serif'; ctx.fillText(t.name, scx, y+ic+34);
+      ctx.textAlign="center"; ctx.fillStyle=on?"#b45c3f":"#3c372e"; ctx.font=(on?"700 ":"400 ")+'24px "Noto Sans TC",sans-serif'; ctx.fillText(t.name, scx, y+ic+30);
     }
-    y+=ic+34+46;
-  } else {
-    ctx.font='400 30px "Noto Sans TC",sans-serif'; ctx.fillStyle="#8b8171";
-    y=para(wrapText(ctx,"你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多。",CW), LX, y+6, 48)+22;
-  }
+    y+=ic+30+34;
+  };
+  ctx.textAlign="left"; ctx.fillStyle="#8b8171"; ctx.font='700 30px "Noto Sans TC",sans-serif'; ctx.fillText("各自的必吃", LX, y); y+=44;
+  await drawCmpRow("你", state.must);
+  await drawCmpRow("對方", partner.must);
+  ctx.textAlign="center"; ctx.fillStyle="#8b8171"; ctx.font='400 24px "Noto Sans TC",sans-serif';
+  ctx.fillText(n?`亮起來的前 ${n} 樣，是你們都選的`:"你們沒有重疊的必吃，各有各的堅持", cx, y); y+=34;
   // 地雷提醒卡
   if(lm.length){
     ctx.font='400 28px "Noto Sans TC",sans-serif';
@@ -1218,9 +1343,17 @@ function mountCompatResult(partner){
   const theirFavMyBan=[...new Set(partner.must.filter(id=>state.ban.includes(id)))];        // 對方的最愛在你的地雷
   const myFavTheirBan=[...new Set(state.must.filter(id=>(partner.ban||[]).includes(id)))];  // 你的最愛在對方的地雷
   const meter=`${"●".repeat(n)}${"○".repeat(5-n)}<b>${n} / 5</b>`;
-  const sharedBlock = n
-    ? `<div class="res-summary"><div class="rs-row"><span class="rs-k" style="color:var(--accent)">共同</span>${miniList(shared)}</div></div>`
-    : `<div class="res-subdesc" style="text-align:center">你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多。</div>`;
+  // 兩排對照：你 / 對方 各自的必吃，重疊的排最前面並亮起來，一眼看出哪些相同、哪些各有堅持。
+  const sharedSet=new Set(shared);
+  const order=ids=>[...ids.filter(id=>sharedSet.has(id)), ...ids.filter(id=>!sharedSet.has(id))];
+  const cmpRow=ids=>ids.map(id=>{const t=byId(id), on=sharedSet.has(id);
+    return `<span class="rs-item ${on?"match":""}">${ART[id]||""}<small>${t.name}</small></span>`;}).join("");
+  const compareBlock=`
+    <div class="res-summary cmp">
+      <div class="rs-row"><span class="rs-k mine">你</span>${cmpRow(order(state.must))}</div>
+      <div class="rs-row"><span class="rs-k mine">對方</span>${cmpRow(order(partner.must))}</div>
+    </div>
+    <div class="cmp-note">${n?`亮起來的前 ${n} 樣，是你們都選的`:"你們沒有重疊的必吃，各有各的堅持"}</div>`;
   const lm=[];
   if(theirFavMyBan.length) lm.push(`${theirFavMyBan.map(id=>byId(id).name).join("、")} 是對方的最愛，卻在你的地雷名單上`);
   if(myFavTheirBan.length) lm.push(`${myFavTheirBan.map(id=>byId(id).name).join("、")} 是你的最愛，卻在對方的地雷名單上`);
@@ -1244,29 +1377,32 @@ function mountCompatResult(partner){
         <div class="ch-meter">${meter}</div>
       </div>
       <p class="res-desc" style="text-align:center">${lvl.desc}</p>
-      ${sharedBlock}
+      <div class="cmp-head">各自的必吃</div>
+      ${compareBlock}
       ${landmineBlock}
       <div class="res-actions">
         <button class="wc-cta ready" id="shareCompat">分享我們的契合度${iceIconSvg()}</button>
         <button class="ghost-btn" id="again">換一個代碼再測</button>
       </div>
       <button class="ghost-btn small" id="back">← 回我的結果</button>
+      <button class="ghost-btn small" id="whatis">這是什麼測驗？</button>
       <div class="credit">概念發想　<b>Emily</b>　×　設計實作　<b>Mike</b></div>
     </div>`;
   primeCompatCard(partner, lvl, n);   // 先產好契合度卡，按分享時直接叫原生分享面板
   document.getElementById("shareCompat").onclick=(e)=>shareCompatResult(lvl, n, e.currentTarget);
   document.getElementById("again").onclick=()=>{ state.screen="compat"; render(); window.scrollTo(0,0); };
   document.getElementById("back").onclick=()=>{ state.screen="result"; render(); window.scrollTo(0,0); };
+  document.getElementById("whatis").onclick=showExplainer;
 }
 // 契合度分享：與單人分享同套 — 手機用事先備好的圖叫原生分享面板，桌機退回下載圖＋複製文字。
 async function shareCompatResult(lvl, n, btn){
   const orig=btn.textContent;
   const url = /^https?:/.test(location.origin) ? location.href.split("#")[0] : "";
-  const text = `我們的刨冰契合度是「${lvl.name}」，必吃重疊 ${n}/5。來測你們的吧。`;
+  const text = `我們的刨冰契合度是「${lvl.name}」，必吃重疊 ${n}/5。來測你們的吧：`;
   if(navigator.share){
     const file=compatFileReady;
     const canFile = file && navigator.canShare && navigator.canShare({files:[file]});
-    const payload = canFile ? {files:[file], text} : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
+    const payload = canFile ? (url ? {files:[file], text, url} : {files:[file], text}) : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
     try{ await navigator.share(payload); return; }
     catch(err){ if(err && err.name==="AbortError") return; }
   }
@@ -1275,6 +1411,36 @@ async function shareCompatResult(lvl, n, btn){
   btn.disabled=false; btn.textContent=orig;
   if(file){ const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
   copyText(url?`${text} ${url}`:text, btn, orig, file ? "已下載圖 + 複製文字 ✓" : "已複製，貼給對方 ✓");
+}
+
+/* ============ 邀請連結 ============
+   分享出去的連結帶著發起人的刨冰代碼（#i=CODE）。收到的人打開 → 照常看開場、做測驗，
+   做完後結果頁會出現「看你們的契合度」按鈕，直接用連結裡的代碼算契合度（免手動輸入）。 */
+(function initInvite(){
+  try{
+    const m=(location.hash||"").match(/[#&]i=([0-9a-zA-Z]{6})/);
+    if(m){ const dec=decodeCode(m[1]); if(dec){ state.invite=dec; state.inviteCode=m[1].toUpperCase(); } }
+  }catch(e){}
+})();
+
+/* ============ 「這是什麼」說明浮層 ============
+   結果頁 / 契合度頁都能點開，串回開場介紹的概念，看完關掉、不影響當前結果。 */
+function showExplainer(){
+  if(document.querySelector(".explainer")) return;
+  const ov=document.createElement("div");
+  ov.className="explainer";
+  ov.innerHTML=`<div class="exp-card" role="dialog" aria-modal="true">
+    <div class="exp-kicker">— 這 是 什 麼 —</div>
+    <h3 class="exp-title">一碗刨冰，一種人格</h3>
+    <p class="exp-p">每個人心中，都有一碗屬於自己的完美刨冰。從小到大，那份對特定配料的執念，早已悄悄刻劃了你的模樣。</p>
+    <p class="exp-p">挑出你<b>必加</b>與<b>絕不加</b>的配料，就能測出你的刨冰人格；把代碼傳給另一半，還能看你們一起吃這碗冰的契合度。</p>
+    <button class="wc-cta ready" id="expOk">我懂了</button>
+  </div>`;
+  document.body.appendChild(ov);
+  requestAnimationFrame(()=>ov.classList.add("on"));
+  const close=()=>{ ov.classList.remove("on"); setTimeout(()=>ov.remove(),200); };
+  ov.addEventListener("click",e=>{ if(e.target===ov) close(); });
+  ov.querySelector("#expOk").onclick=close;
 }
 
 render();
