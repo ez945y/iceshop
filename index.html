@@ -121,6 +121,7 @@ body{
 .wc-cta:active{transform:translateY(1px)}
 .wc-cta:disabled{background:var(--line); color:var(--ink-soft); cursor:not-allowed}
 .wc-cta.ready{background:var(--accent)}
+.ice-ico{width:1.05em; height:1.05em; vertical-align:-.17em; display:inline-block; margin-left:.28em}
 .wc-cta.big{font-size:17px; letter-spacing:3px; padding:14px 32px; border-radius:14px;
   animation:ctaPop .5s cubic-bezier(.3,1.5,.5,1) both}
 @keyframes ctaPop{0%{opacity:0;transform:scale(.8)}100%{opacity:1;transform:scale(1)}}
@@ -170,8 +171,11 @@ body{
 .res-bowl{position:relative; height:180px; margin:2px auto 4px}
 .res-name{font-family:var(--font-brush); font-size:33px; font-weight:700; color:var(--ink); letter-spacing:3px; line-height:1.2}
 .res-tag{font-family:var(--font-brush); font-size:17px; color:var(--accent); margin:8px 0 10px; letter-spacing:1px}
+.res-subs{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin:2px 0}
 .res-sub{display:inline-block; font-size:13px; color:var(--ink); background:var(--card); border:1px solid var(--line);
   border-radius:20px; padding:4px 15px; letter-spacing:1px}
+.credit{font-size:11px; color:var(--ink-soft); opacity:.72; text-align:center; letter-spacing:.5px; margin:22px 0 2px}
+.credit b{font-weight:700; color:var(--ink-soft)}
 .res-desc{font-size:14.5px; line-height:2; color:var(--ink); letter-spacing:.3px; margin:18px 4px 14px; text-align:justify}
 .res-subdesc{font-size:13px; line-height:1.85; color:var(--ink-soft); background:var(--card); border:1px solid var(--line);
   border-radius:12px; padding:11px 15px; margin:0 0 18px; text-align:left}
@@ -421,7 +425,12 @@ const ART = {
 
 function foodMarkup(t){
   if(ART[t.id]) return `<div class="food">${ART[t.id]}</div>`;
-  return `<div class="food"><div class="food-placeholder">🧊</div></div>`;
+  return `<div class="food"><div class="food-placeholder">${iceIconSvg()}</div></div>`;
+}
+// 刨冰小 icon（取代原本的刨冰 emoji）。線條式、吃 currentColor，放在深色鈕上是白線、放在淺底文字裡是墨色。
+// 不帶 width/height（HTML 由 .ice-ico 決定大小；canvas 由 svgToImage 補上）。
+function iceIconSvg(color){ color=color||"currentColor";
+  return `<svg class="ice-ico" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.6 12H19.4A7.4 6.5 0 0 1 4.6 12Z"/><path d="M5 12C5 7.6 8 4 12 4C16 4 19 7.6 19 12"/><path d="M9.4 12C10.2 10.1 10.7 8.7 12 8.7C13.3 8.7 13.8 10.1 14.6 12"/><path d="M12 4V2.6"/></svg>`;
 }
 
 const byId=id=>TOPPINGS[id];
@@ -628,7 +637,7 @@ function mountSelect(mode){
       <h1 class="mast-title">${fp?"換他挑一碗":"挑一碗，像你的冰"}</h1>
       <div class="mast-rule"><span class="seal-mark">冰</span></div>
     </header>
-    ${fp?'<div style="margin:2px 16px 10px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center">你的結果已存起來，換對方選完就直接看你們的契合度 🍧</div>':""}
+    ${fp?'<div style="margin:2px 16px 10px;padding:8px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);color:var(--ink-soft);font-size:13px;text-align:center">你的結果已存起來，換對方選完就直接看你們的契合度'+iceIconSvg()+'</div>':""}
     <div class="step-head">
       <div class="step-line"><span class="step-no">${stepNo}</span><span class="step-name">${stepName}</span></div>
       <div class="step-sub">${stepSub}</div>
@@ -727,14 +736,49 @@ function mainPersona(must){
   order.forEach(k=>{ if(c[k]>c[best]) best=k; });
   return PERSONA[best];
 }
-function subTag(ban){
+/* ============ 推論原因（回扣實際選料）============
+   規則：文案不直接下結論，而是先講「你選了哪些料、佔比如何」這個觀察，再由觀察推導。
+   語氣留有餘地（看起來／也許／大概／多半／傾向），不用破折號，改成兩句直述。 */
+const CATNAME={sauce:"醬汁糖水",bean:"豆穀",chewy:"嚼勁",jelly:"果凍",produce:"農產鮮果"};
+function namesOfCat(ids,cat){ return ids.filter(id=>byId(id).cat===cat).map(id=>byId(id).name); }
+// 依「必吃 5 樣」的類別分佈，寫出推向主人格的理由（帶進實際的料名與數量）。
+function personaReason(must){
+  const c=catCounts(must);
+  const distinct=Object.values(c).filter(n=>n>0).length;
+  if(distinct===5){
+    return `這 5 樣必吃剛好散在 5 個不同類別，一類只挑一樣（${must.map(id=>byId(id).name).join("、")}）。感覺你不太想把整碗交給單一口味，每種好像都想留一口。這份「什麼都想試試」，或許正是你可愛的地方。`;
+  }
+  const order=["chewy","sauce","bean","produce","jelly"];
+  let best=order[0]; order.forEach(k=>{ if(c[k]>c[best]) best=k; });
+  const picks=namesOfCat(must,best);
+  const R={
+    chewy:`你的必吃有 ${picks.length} 樣壓在嚼勁類（${picks.join("、")}），比其他類多一些。看起來你挺吃那口彈牙的痛快，喜歡的東西大概也傾向直接抓住，比較少在原地糾結。至少吃冰的時候，你是這樣。`,
+    bean:`你的必吃有 ${picks.length} 樣落在豆穀類（${picks.join("、")}），份量偏重。這些多半是最耐吃、最不追流行的老班底。也許你在意的也接近這種調性，是本質，也是那份熟悉的踏實。`,
+    produce:`你的必吃有 ${picks.length} 樣是農產鮮果（${picks.join("、")}），佔得最多。似乎你偏好真材實料、不太靠加工堆味道，大概也覺得有時候最單純的反而最好。`,
+    jelly:`你的必吃有 ${picks.length} 樣選了果凍類（${picks.join("、")}），比其他類多一些。這些入口即化、不太搶戲、跟誰都合得來。你給人的感覺可能也有點像，隨遇而安、好相處。`,
+    sauce:`你的必吃有 ${picks.length} 樣是醬汁糖水（${picks.join("、")}），比其他類多一些。這是最放縱、最甜的一類。或許你心裡也留著一點童心，覺得快樂還是及時一點好。`,
+  };
+  return R[best];
+}
+// 副標籤原因：注意不要跟主人格打架。例如主人格是「嚼勁愛好者」時，拒吃嚼勁的理由要寫成
+// 「不是不愛，只是懶得為它費工」（效率），而不是「不愛咬」，否則自相矛盾。
+const SUBTAG_REASON={
+  chewy:(picks)=>`你把 ${picks.length} 樣嚼勁類放進拒吃（${picks.join("、")}）。與其說不愛，比較像是懶得為它多費那道工。看起來你挺講求效率，能省的麻煩就不太想沾。`,
+  bean:(picks)=>`你把 ${picks.length} 樣豆穀類放進拒吃（${picks.join("、")}），這類算是冰品裡最常見的老班底。你先擱下它們，感覺你大概比較喜歡新鮮的東西，不太想每次都一樣。`,
+  produce:(picks)=>`你把 ${picks.length} 樣農產鮮果放進拒吃（${picks.join("、")}）。這些常被當成比較健康的選項，你把它們擺一邊，或許當下的爽度對你來說更要緊一些。`,
+  sauce:(picks)=>`你把 ${picks.length} 樣醬汁糖水放進拒吃（${picks.join("、")}）。這是最甜最放縱的一類，你主動避開，看起來是個蠻有分寸的人，該收手的時候大概也收得住。`,
+  jelly:(picks)=>`你把 ${picks.length} 樣果凍類放進拒吃（${picks.join("、")}）。這類口感偏淡、存在感低，你不太買單，感覺你偏好立場清楚的東西，喜歡就喜歡、無感就算了。`,
+};
+// 依「拒吃 4 樣」的分佈回傳「一到多個」標籤（每個達 2 樣的類別各算一個標籤，例如 2+2 → 兩個標籤）。
+// 回傳 [{name, reason}]，皆未達 2 樣 → 海納百川。取代舊的單一 subTag/subTagReason。
+function subTagList(ban){
   const c=catCounts(ban);
-  // 取拒吃最多的類別；達 2 以上才算「明顯排斥」→ 對應副標籤，否則地雷分散 → 海納百川。
-  // 5 類都納入（sauce/jelly 以前被漏掉，導致明明拒吃 4 樣卻誤判成「沒有地雷」）。
   const order=["chewy","bean","produce","sauce","jelly"]; // 同票優先序
-  let best=order[0];
-  order.forEach(k=>{ if(c[k]>c[best]) best=k; });
-  return c[best]>=2 ? SUBTAG[best] : SUBTAG.none;
+  const hit=order.filter(k=>c[k]>=2).sort((a,b)=> c[b]-c[a] || order.indexOf(a)-order.indexOf(b));
+  if(!hit.length){
+    return [{name:SUBTAG.none.name, reason:`你的 4 樣拒吃挺分散（${ban.map(id=>byId(id).name).join("、")}），沒有特別排斥哪一類。地雷這麼少，大概表示你口味蠻開闊的，跟你吃飯的人多半很省心。`}];
+  }
+  return hit.map(k=>({name:SUBTAG[k].name, reason:SUBTAG_REASON[k](namesOfCat(ban,k))}));
 }
 
 /* ============ 刨冰代碼（6 碼英數）============
@@ -791,7 +835,7 @@ function finishPartnerRound(){
   window.scrollTo(0,0); mountCompatResult(person2);
 }
 function mountResult(){
-  const p=mainPersona(state.must), s=subTag(state.ban), code=makeCode();
+  const p=mainPersona(state.must), tags=subTagList(state.ban), code=makeCode();
   app.innerHTML=`
     <header class="mast">
       <div class="mast-kicker">你 的 刨 冰 人 格</div>
@@ -801,9 +845,9 @@ function mountResult(){
       <div class="res-bowl">${filledBowl(state.must,220)}</div>
       <div class="res-name">${p.name}</div>
       <div class="res-tag">「${p.tagline}」</div>
-      <div><span class="res-sub">隱藏標籤 × ${s.name}</span></div>
-      <p class="res-desc">${p.desc}</p>
-      <div class="res-subdesc"><b>${s.name}</b>　${s.desc}</div>
+      <div class="res-subs">${tags.map(t=>`<span class="res-sub">${t.name}</span>`).join("")}</div>
+      <p class="res-desc">${personaReason(state.must)}</p>
+      ${tags.map(t=>`<div class="res-subdesc"><b>${t.name}</b>　${t.reason}</div>`).join("")}
       <div class="res-summary">
         <div class="rs-row"><span class="rs-k">必加</span>${miniList(state.must)}</div>
         <div class="rs-row"><span class="rs-k ban">不加</span>${miniList(state.ban,true)}</div>
@@ -815,13 +859,15 @@ function mountResult(){
         <div class="code-hint">把代碼傳給另一半，或輸入對方的代碼，<br>測出你們一起吃這碗冰的契合度。</div>
       </div>
       <div class="res-actions">
-        <button class="wc-cta ready" id="share">分享我的結果 🍧</button>
+        <button class="wc-cta ready" id="share">分享我的結果${iceIconSvg()}</button>
         <button class="ghost-btn" id="forPartner">接著幫對方測，看契合度 →</button>
       </div>
       <button class="ghost-btn small" id="toCompat">我有對方的代碼</button>
       <button class="ghost-btn small" id="restart">重新測一次</button>
+      <div class="credit">概念發想　<b>Emily</b>　×　設計實作　<b>Mike</b></div>
     </div>`;
 
+  primeCard(code);   // 先把分享卡產好，等使用者按分享時就能直接叫原生分享面板（不再變成下載）
   const copyBtn=document.getElementById("copy");
   copyBtn.onclick=()=>copyText(code, copyBtn, "複製代碼");
   document.getElementById("share").onclick=(e)=>shareInvite(p, code, e.currentTarget);
@@ -835,24 +881,35 @@ function copyText(text, btn, orig, doneTxt){
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(ok,ok); }
   else{ const ta=document.createElement("textarea"); ta.value=text; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");}catch(e){} ta.remove(); ok(); }
 }
-// 分享：手機叫出原生分享面板（LINE / Threads / IG…都在裡面），桌機退回複製。
-// 附上結果圖（有做出來才帶），失敗或不支援就只分享文字。
+// 進結果頁時就先把分享卡產好存起來（見 mountResult）。這是為了「原生分享」而做：
+// navigator.share() 必須在使用者手勢（點擊）當下、且未被長時間 await 打斷的情況下呼叫，
+// 否則 iOS/Android 會判定手勢過期而拒絕 → 舊版在點擊當下才 await resultCardBlob()（載字型＋光柵化一堆 SVG，耗時長），
+// 手勢一過期就 reject，掉進桌機退路變成「下載」。改成事先產好、點擊當下直接 share()，手機才會跳出原生分享面板。
+let cardFilePromise=null, cardFileReady=null;
+function primeCard(code){
+  cardFileReady=null;
+  cardFilePromise=resultCardBlob()
+    .then(blob=>{ cardFileReady = blob ? new File([blob],`刨冰人格_${code}.png`,{type:"image/png"}) : null; return cardFileReady; })
+    .catch(()=>null);
+}
+// 分享：手機叫出原生分享面板（LINE / Threads / IG…都在裡面），桌機退回下載圖＋複製文字。
 async function shareInvite(p, code, btn){
   const orig=btn.textContent;
   const url = /^https?:/.test(location.origin) ? location.href.split("#")[0] : "";
-  const text = `我的刨冰人格是「${p.name}」🍧 來測我們一起吃冰的契合度～ 刨冰代碼：${code}`;
-  btn.textContent="準備分享…"; btn.disabled=true;
-  let file=null;
-  try{ const blob=await resultCardBlob(); if(blob) file=new File([blob],`刨冰人格_${code}.png`,{type:"image/png"}); }catch(e){}
-  btn.disabled=false; btn.textContent=orig;
-  // 1) 手機原生分享（優先帶圖）
+  const text = `我的刨冰人格是「${p.name}」。來測測我們一起吃冰的契合度，刨冰代碼：${code}`;
+  // 1) 手機原生分享：用「已備好」的圖，點擊當下不 await 產圖，保住使用者手勢。
   if(navigator.share){
-    const withFile = file && navigator.canShare && navigator.canShare({files:[file]})
-      ? {files:[file], text} : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
-    try{ await navigator.share(withFile); return; }
-    catch(err){ if(err && err.name==="AbortError") return; }
+    const file=cardFileReady;   // 可能還在產（使用者秒點）→ 就先只分享文字，仍是原生面板
+    const canFile = file && navigator.canShare && navigator.canShare({files:[file]});
+    const payload = canFile ? {files:[file], text}
+                            : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
+    try{ await navigator.share(payload); return; }
+    catch(err){ if(err && err.name==="AbortError") return; /* 其它錯誤 → 掉到下方退路 */ }
   }
-  // 2) 桌機退路：有圖就下載圖 + 複製文字，否則只複製文字
+  // 2) 桌機退路（沒有原生分享）：等圖產好就下載圖＋複製文字，否則只複製文字。
+  btn.textContent="準備圖片…"; btn.disabled=true;
+  let file=cardFileReady; if(!file && cardFilePromise){ try{ file=await cardFilePromise; }catch(e){} }
+  btn.disabled=false; btn.textContent=orig;
   if(file){ const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
   copyText(url ? `${text} ${url}` : text, btn, orig, file ? "已下載圖 + 複製文字 ✓" : "已複製，貼給對方 ✓");
 }
@@ -867,59 +924,155 @@ function svgToImage(svg, w, h){
 }
 function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
   ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-// 把單人結果畫成一張分享卡（1080×1350 PNG）。固定淺色主題，分享出去長相才一致。
-// 重現頁面上的「碗＋堆料」：各自把自包含 SVG 點陣化再依 MOUND 座標疊上去（不靠截圖套件，Safari 也能跑）。
+// canvas 沒有自動換行：逐字（CJK 適用）量測寬度，超過 maxW 就斷行；保留手動 \n。
+function wrapText(ctx,text,maxW){
+  const out=[]; let line="";
+  for(const ch of [...text]){
+    if(ch==="\n"){ out.push(line); line=""; continue; }
+    if(line && ctx.measureText(line+ch).width>maxW){ out.push(line); line=ch; }
+    else line+=ch;
+  }
+  if(line) out.push(line);
+  return out;
+}
+// 在 canvas 上畫刨冰小 icon（取代 emoji），中心對齊 (centerX, midY)。
+async function drawIce(ctx, centerX, midY, size, color){
+  const im=await svgToImage(iceIconSvg(color), size*2, size*2);
+  ctx.drawImage(im, centerX-size/2, midY-size/2, size, size);
+}
+// 在 canvas 上畫「一碗冰＋堆料」，碗心在 centerX、頂端在 topY，碗寬 bw。回傳碗底 y。
+async function drawBowl(ctx, centerX, topY, bw, ids){
+  const bh=bw*150/200, bx=centerX-bw/2;
+  try{
+    const bowlImg=await svgToImage(bowlSvg(), bw*2, bh*2);
+    ctx.save(); ctx.shadowColor="rgba(70,55,35,.2)"; ctx.shadowBlur=18; ctx.shadowOffsetY=10;
+    ctx.drawImage(bowlImg, bx, topY, bw, bh); ctx.restore();
+    const POS=[[26,49],[41,38],[59,38],[74,49],[50,57]], ROT=[-13,9,-7,14,2], ts=bw*0.135;
+    for(let i=0;i<Math.min(ids.length,5);i++){ const art=ART[ids[i]]; if(!art) continue;
+      const [mx,my]=POS[i]; const im=await svgToImage(art, ts*2, ts*2);
+      ctx.save(); ctx.shadowColor="rgba(60,45,25,.28)"; ctx.shadowBlur=7; ctx.shadowOffsetY=4;
+      ctx.translate(bx+mx/100*bw, topY+my/100*bh); ctx.rotate(ROT[i]*Math.PI/180);
+      ctx.drawImage(im,-ts/2,-ts/2,ts,ts); ctx.restore();
+    }
+  }catch(e){}
+  return topY+bh;
+}
+// 一行「文字 + 刨冰 icon」置中畫出（icon 在文字右側）。回傳無。
+async function drawTextWithIce(ctx, text, cx, baselineY, font, color, icoColor){
+  ctx.textAlign="left"; ctx.font=font; ctx.fillStyle=color;
+  const tw=ctx.measureText(text).width, ico=38, gap=14, total=tw+gap+ico, sx=cx-total/2;
+  ctx.fillText(text, sx, baselineY);
+  await drawIce(ctx, sx+tw+gap+ico/2, baselineY-13, ico, icoColor);
+}
+// 把單人結果畫成一張「完整」分享卡：碗＋人格名＋標語＋標籤＋推論原因＋各標籤原因＋必加/不加清單＋代碼＋CTA。
+// 固定 1080 寬（分享出去長相一致），高度依內容自適應（先畫進超高暫存 canvas 追蹤 y，再裁成實際高度＋補上底與邊框）。
+// 重現頁面上的「碗＋堆料」：把自包含 SVG 點陣化再依座標疊上（不靠截圖套件，Safari 也能跑）。
 async function resultCardBlob(){
   if(!(state.must && state.must.length===5)) return null;
-  const p=mainPersona(state.must), s=subTag(state.ban), code=makeCode();
-  const W=1080, H=1350, cx=W/2;
-  const cv=document.createElement("canvas"); cv.width=W; cv.height=H;
-  const ctx=cv.getContext("2d");
+  const p=mainPersona(state.must), tags=subTagList(state.ban), code=makeCode();
+  const W=1080, cx=W/2, PAD=88, CW=W-PAD*2, LX=PAD;   // 內容左緣與可用寬度
   await document.fonts.ready;
   try{ await Promise.all([
-    document.fonts.load('700 92px "LXGW WenKai TC"'),
-    document.fonts.load('700 40px "Noto Sans TC"'),
-    document.fonts.load('400 40px "Noto Sans TC"'),
+    document.fonts.load('700 84px "LXGW WenKai TC"'),
+    document.fonts.load('700 40px "LXGW WenKai TC"'),
+    document.fonts.load('400 34px "Noto Sans TC"'),
+    document.fonts.load('700 34px "Noto Sans TC"'),
   ]); }catch(e){}
-  ctx.fillStyle="#faf5ea"; ctx.fillRect(0,0,W,H);
-  ctx.strokeStyle="rgba(60,55,46,.18)"; ctx.lineWidth=3; roundRect(ctx,30,30,W-60,H-60,26); ctx.stroke();
-  ctx.textAlign="center"; ctx.textBaseline="alphabetic";
-  ctx.fillStyle="#8b8171"; ctx.font='700 40px "LXGW WenKai TC","Noto Serif TC",serif';
-  ctx.fillText("刨 冰 人 格 測 驗", cx, 132);
+  // ---- 先畫進一張夠高的暫存 canvas（透明底），一路累加 y ----
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=3200;
+  const ctx=cv.getContext("2d"); ctx.textBaseline="alphabetic";
+  // 左對齊多行段落
+  const para=(lines,x,y,lh)=>{ ctx.textAlign="left"; for(const ln of lines){ ctx.fillText(ln,x,y); y+=lh; } return y; };
+  // kicker
+  ctx.textAlign="center"; ctx.fillStyle="#8b8171"; ctx.font='700 40px "LXGW WenKai TC","Noto Serif TC",serif';
+  ctx.fillText("刨 冰 人 格 測 驗", cx, 120);
   // bowl + mounded toppings
-  const BW=600, BH=BW*150/200, bx=cx-BW/2, by=196;
+  const BW=560, BH=BW*150/200, bx=cx-BW/2, by=150;
   try{
     const bowlImg=await svgToImage(bowlSvg(), BW*2, BH*2);
     ctx.save(); ctx.shadowColor="rgba(70,55,35,.22)"; ctx.shadowBlur=26; ctx.shadowOffsetY=14;
     ctx.drawImage(bowlImg, bx, by, BW, BH); ctx.restore();
-    // 分享卡專用擺盤：比遊戲內 MOUND 更散開（不糊成一坨），沿冰丘排成弧形，
-    // 每顆帶落地陰影＋些微轉角，看起來像一顆顆料而不是一坨。前排（y 較大）最後畫，自然疊在上面。
-    const CARD_POS=[[26,49],[41,38],[59,38],[74,49],[50,57]];
-    const CARD_ROT=[-13,9,-7,14,2];
-    const tsize=76;
+    const CARD_POS=[[26,49],[41,38],[59,38],[74,49],[50,57]], CARD_ROT=[-13,9,-7,14,2], tsize=72;
     for(let i=0;i<state.must.length;i++){
       const art=ART[state.must[i]]; if(!art) continue;
       const [mxp,myp]=CARD_POS[i]||[50,50];
-      const ccx=bx+mxp/100*BW, ccy=by+myp/100*BH;
       const ti=await svgToImage(art, tsize*2, tsize*2);
-      ctx.save();
-      ctx.shadowColor="rgba(60,45,25,.28)"; ctx.shadowBlur=9; ctx.shadowOffsetY=5;
-      ctx.translate(ccx,ccy); ctx.rotate(CARD_ROT[i]*Math.PI/180);
-      ctx.drawImage(ti, -tsize/2, -tsize/2, tsize, tsize);
-      ctx.restore();
+      ctx.save(); ctx.shadowColor="rgba(60,45,25,.28)"; ctx.shadowBlur=9; ctx.shadowOffsetY=5;
+      ctx.translate(bx+mxp/100*BW, by+myp/100*BH); ctx.rotate(CARD_ROT[i]*Math.PI/180);
+      ctx.drawImage(ti, -tsize/2, -tsize/2, tsize, tsize); ctx.restore();
     }
   }catch(e){}
-  let y=by+BH+118;
-  ctx.fillStyle="#3c372e"; ctx.font='700 92px "LXGW WenKai TC","Noto Serif TC",serif'; ctx.fillText(p.name, cx, y);
-  y+=76; ctx.fillStyle="#b45c3f"; ctx.font='400 40px "Noto Sans TC",sans-serif'; ctx.fillText("「"+p.tagline+"」", cx, y);
-  y+=62; ctx.fillStyle="#8b8171"; ctx.font='700 34px "Noto Sans TC",sans-serif'; ctx.fillText("隱藏標籤 × "+s.name, cx, y);
-  // code chip
-  y+=54; const chipW=440, chipH=120, chipX=cx-chipW/2;
-  ctx.fillStyle="#fbf7ef"; ctx.strokeStyle="rgba(60,55,46,.18)"; ctx.lineWidth=2; roundRect(ctx,chipX,y,chipW,chipH,18); ctx.fill(); ctx.stroke();
-  ctx.fillStyle="#8b8171"; ctx.font='700 26px "Noto Sans TC",sans-serif'; ctx.fillText("刨 冰 代 碼", cx, y+44);
-  ctx.fillStyle="#b45c3f"; ctx.font='800 60px ui-monospace,Menlo,monospace'; ctx.fillText(code, cx, y+104);
-  y+=chipH+66; ctx.fillStyle="#3c372e"; ctx.font='700 36px "Noto Sans TC",sans-serif'; ctx.fillText("來測你的刨冰人格 🍧", cx, y);
-  return await new Promise(res=>cv.toBlob(res,"image/png"));
+  let y=by+BH+96;
+  // 人格名 + 標語
+  ctx.textAlign="center"; ctx.fillStyle="#3c372e"; ctx.font='700 84px "LXGW WenKai TC","Noto Serif TC",serif'; ctx.fillText(p.name, cx, y);
+  y+=64; ctx.fillStyle="#b45c3f"; ctx.font='400 38px "LXGW WenKai TC","Noto Serif TC",serif'; ctx.fillText("「"+p.tagline+"」", cx, y);
+  // 標籤膠囊（可能一到多個，置中排一列）
+  y+=54;
+  ctx.font='700 30px "Noto Sans TC",sans-serif';
+  const chipPad=52, chipGap=18, tagH=52;
+  const chipWs=tags.map(t=>ctx.measureText(t.name).width+chipPad);
+  let tx=cx-(chipWs.reduce((a,b)=>a+b,0)+chipGap*(tags.length-1))/2;
+  tags.forEach((t,i)=>{
+    const w=chipWs[i];
+    ctx.fillStyle="#fbf7ef"; ctx.strokeStyle="rgba(60,55,46,.18)"; ctx.lineWidth=2; roundRect(ctx,tx,y-38,w,tagH,26); ctx.fill(); ctx.stroke();
+    ctx.fillStyle="#8b8171"; ctx.textAlign="center"; ctx.fillText(t.name, tx+w/2, y);
+    tx+=w+chipGap;
+  });
+  y+=54;
+  // 推論原因（左對齊段落）
+  ctx.font='400 34px "Noto Sans TC",sans-serif'; ctx.fillStyle="#3c372e";
+  y=para(wrapText(ctx,personaReason(state.must),CW), LX, y+22, 54)+6;
+  // 每個標籤各一張原因卡
+  for(const t of tags){
+    ctx.font='400 30px "Noto Sans TC",sans-serif';
+    const sLines=wrapText(ctx,t.reason,CW-64);
+    const cardH=84+sLines.length*46;   // 內距（標籤行+上下留白）+ 段落行數
+    ctx.fillStyle="#fbf7ef"; ctx.strokeStyle="rgba(60,55,46,.16)"; ctx.lineWidth=2; roundRect(ctx,LX,y,CW,cardH,20); ctx.fill(); ctx.stroke();
+    let sy=y+56; ctx.textAlign="left"; ctx.fillStyle="#6f7a58"; ctx.font='700 32px "Noto Sans TC",sans-serif'; ctx.fillText(t.name, LX+32, sy);
+    sy+=12; ctx.fillStyle="#8b8171"; ctx.font='400 30px "Noto Sans TC",sans-serif'; para(sLines, LX+32, sy+34, 46);
+    y+=cardH+22;
+  }
+  y+=34;
+  // 必加 / 不加 清單（圖示 + 名稱）
+  const drawRow=async(label,ids,color,off)=>{
+    ctx.textAlign="left"; ctx.fillStyle=color; ctx.font='700 30px "Noto Sans TC",sans-serif';
+    ctx.fillText(label, LX, y); y+=44;
+    const n=ids.length, slot=CW/n, ic=off?78:86;
+    for(let i=0;i<n;i++){
+      const t=byId(ids[i]), art=ART[ids[i]]; const scx=LX+(i+0.5)*slot;
+      if(art){ const im=await svgToImage(art, ic*2, ic*2);
+        ctx.save(); if(off) ctx.globalAlpha=0.45; ctx.drawImage(im, scx-ic/2, y, ic, ic); ctx.restore();
+        if(off){ ctx.strokeStyle="#bb3b2e"; ctx.lineWidth=6; ctx.lineCap="round"; const r=ic*0.26, mx=scx, myy=y+ic/2;
+          ctx.beginPath(); ctx.moveTo(mx-r,myy-r); ctx.lineTo(mx+r,myy+r); ctx.moveTo(mx+r,myy-r); ctx.lineTo(mx-r,myy+r); ctx.stroke(); }
+      }
+      ctx.textAlign="center"; ctx.fillStyle=off?"#a99f8c":"#3c372e"; ctx.font='400 26px "Noto Sans TC",sans-serif';
+      ctx.fillText(t.name, scx, y+ic+34);
+    }
+    y+=ic+34+40;
+  };
+  await drawRow("必加 · 5 樣靈魂配料", state.must, "#6f7a58", false);
+  await drawRow("不加 · 4 樣拒絕往來", state.ban, "#bb3b2e", true);
+  // 代碼卡
+  const chipW=CW, chipH=132;
+  ctx.fillStyle="#faf5ea"; ctx.strokeStyle="#b45c3f"; ctx.setLineDash([10,7]); ctx.lineWidth=2.5; roundRect(ctx,LX,y,chipW,chipH,18); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+  ctx.textAlign="center"; ctx.fillStyle="#8b8171"; ctx.font='700 26px "Noto Sans TC",sans-serif'; ctx.fillText("刨 冰 代 碼（傳給另一半就能測契合度）", cx, y+50);
+  ctx.fillStyle="#b45c3f"; ctx.font='800 58px ui-monospace,Menlo,monospace'; ctx.fillText(code, cx, y+110);
+  y+=chipH+70;
+  // CTA（emoji 換成刨冰 icon）
+  await drawTextWithIce(ctx, "來測你的刨冰人格", cx, y, '700 36px "Noto Sans TC",sans-serif', "#3c372e", "#b45c3f");
+  y+=44;
+  // 低調署名
+  ctx.textAlign="center"; ctx.fillStyle="#a99f8c"; ctx.font='400 22px "Noto Sans TC",sans-serif';
+  ctx.fillText("Emily 發想概念 × Mike 設計實作", cx, y);
+  y+=20;
+  // ---- 裁成實際高度：新 canvas 填底＋邊框，再把內容區貼上 ----
+  const H=Math.round(y+48);
+  const out=document.createElement("canvas"); out.width=W; out.height=H;
+  const octx=out.getContext("2d");
+  octx.fillStyle="#faf5ea"; octx.fillRect(0,0,W,H);
+  octx.strokeStyle="rgba(60,55,46,.18)"; octx.lineWidth=3; roundRect(octx,30,30,W-60,H-60,26); octx.stroke();
+  octx.drawImage(cv, 0,0, W, H, 0,0, W, H);
+  return await new Promise(res=>out.toBlob(res,"image/png"));
 }
 
 /* ============ 雙人契合度 ============ */
@@ -963,6 +1116,100 @@ function mountCompat(){
   document.getElementById("back").onclick=()=>{ state.screen="result"; render(); window.scrollTo(0,0); };
   inp.focus();
 }
+// 契合度分享卡：兩碗並排＋人格名＋契合度等級＋重疊計量＋描述＋共同料/地雷提醒＋CTA＋署名。
+// 與單人卡同套：固定 1080 寬、高度依內容自適應、emoji 換 icon。
+async function compatCardBlob(partner){
+  if(!(state.must && state.must.length && partner && partner.must && partner.must.length)) return null;
+  const shared=state.must.filter(id=>partner.must.includes(id));
+  const n=shared.length, lvl=compatLevel(n);
+  const mine=mainPersona(state.must), theirs=mainPersona(partner.must);
+  const theirFavMyBan=[...new Set(partner.must.filter(id=>state.ban.includes(id)))];
+  const myFavTheirBan=[...new Set(state.must.filter(id=>(partner.ban||[]).includes(id)))];
+  const lm=[];
+  if(theirFavMyBan.length) lm.push(`${theirFavMyBan.map(id=>byId(id).name).join("、")} 是對方的最愛，卻在你的地雷名單上`);
+  if(myFavTheirBan.length) lm.push(`${myFavTheirBan.map(id=>byId(id).name).join("、")} 是你的最愛，卻在對方的地雷名單上`);
+  const W=1080, cx=W/2, PAD=88, CW=W-PAD*2, LX=PAD;
+  await document.fonts.ready;
+  try{ await Promise.all([
+    document.fonts.load('700 76px "LXGW WenKai TC"'),
+    document.fonts.load('400 34px "Noto Sans TC"'),
+    document.fonts.load('700 30px "Noto Sans TC"'),
+  ]); }catch(e){}
+  const cv=document.createElement("canvas"); cv.width=W; cv.height=2600;
+  const ctx=cv.getContext("2d"); ctx.textBaseline="alphabetic";
+  const para=(lines,x,y,lh)=>{ ctx.textAlign="left"; for(const ln of lines){ ctx.fillText(ln,x,y); y+=lh; } return y; };
+  // kicker
+  ctx.textAlign="center"; ctx.fillStyle="#8b8171"; ctx.font='700 40px "LXGW WenKai TC","Noto Serif TC",serif';
+  ctx.fillText("雙 人 契 合 度", cx, 118);
+  // 兩碗並排
+  const bw=340, bh=bw*150/200, topY=168, lcx=LX+CW*0.25, rcx=LX+CW*0.75;
+  await drawBowl(ctx, lcx, topY, bw, state.must);
+  await drawBowl(ctx, rcx, topY, bw, partner.must);
+  ctx.textAlign="center"; ctx.fillStyle="#b45c3f"; ctx.font='700 54px "LXGW WenKai TC",serif'; ctx.fillText("×", cx, topY+bh*0.6);
+  // 角色 + 人格名
+  let y=topY+bh+44;
+  ctx.font='400 24px "Noto Sans TC",sans-serif'; ctx.fillStyle="#a99f8c";
+  ctx.fillText("你", lcx, y); ctx.fillText("對方", rcx, y);
+  y+=44; ctx.font='700 36px "LXGW WenKai TC","Noto Serif TC",serif'; ctx.fillStyle="#3c372e";
+  ctx.fillText(mine.name, lcx, y); ctx.fillText(theirs.name, rcx, y);
+  // 契合度等級 + 範圍
+  y+=90; ctx.fillStyle="#b45c3f"; ctx.font='700 76px "LXGW WenKai TC","Noto Serif TC",serif'; ctx.fillText(lvl.name, cx, y);
+  y+=46; ctx.fillStyle="#8b8171"; ctx.font='400 28px "Noto Sans TC",sans-serif'; ctx.fillText(lvl.range, cx, y);
+  // 重疊計量（實心/空心圓 + n/5）
+  y+=64;
+  const dot=13, gap=34, total=5*gap, sx=cx-total/2+gap/2;
+  for(let i=0;i<5;i++){ ctx.beginPath(); ctx.arc(sx+i*gap, y-dot/2, dot, 0, Math.PI*2);
+    if(i<n){ ctx.fillStyle="#b45c3f"; ctx.fill(); } else { ctx.strokeStyle="#c9c0af"; ctx.lineWidth=2.5; ctx.stroke(); } }
+  ctx.textAlign="left"; ctx.fillStyle="#b45c3f"; ctx.font='700 34px "Noto Sans TC",sans-serif'; ctx.fillText(` ${n} / 5`, sx+5*gap-gap/2+8, y+2);
+  // 描述
+  y+=52; ctx.textAlign="left"; ctx.font='400 34px "Noto Sans TC",sans-serif'; ctx.fillStyle="#3c372e";
+  y=para(wrapText(ctx,lvl.desc,CW), LX, y+24, 54)+10;
+  // 共同必吃 或「沒有相同」
+  if(n){
+    ctx.textAlign="left"; ctx.fillStyle="#b45c3f"; ctx.font='700 30px "Noto Sans TC",sans-serif'; ctx.fillText(`共同必吃 · ${n} 樣`, LX, y); y+=44;
+    const slot=CW/n, ic=80;
+    for(let i=0;i<n;i++){ const t=byId(shared[i]), art=ART[shared[i]], scx=LX+(i+0.5)*slot;
+      if(art){ const im=await svgToImage(art, ic*2, ic*2); ctx.drawImage(im, scx-ic/2, y, ic, ic); }
+      ctx.textAlign="center"; ctx.fillStyle="#3c372e"; ctx.font='400 26px "Noto Sans TC",sans-serif'; ctx.fillText(t.name, scx, y+ic+34);
+    }
+    y+=ic+34+46;
+  } else {
+    ctx.font='400 30px "Noto Sans TC",sans-serif'; ctx.fillStyle="#8b8171";
+    y=para(wrapText(ctx,"你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多。",CW), LX, y+6, 48)+22;
+  }
+  // 地雷提醒卡
+  if(lm.length){
+    ctx.font='400 28px "Noto Sans TC",sans-serif';
+    const lines=wrapText(ctx, lm.join("；")+"。剛好各自一碗，誰都不用勉強自己。", CW-60);
+    const ch=76+lines.length*44;
+    ctx.fillStyle="#fbf7ef"; ctx.strokeStyle="#c1963f"; ctx.setLineDash([9,6]); ctx.lineWidth=2; roundRect(ctx,LX,y,CW,ch,14); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    let ly=y+50; ctx.textAlign="left"; ctx.fillStyle="#c1963f"; ctx.font='700 28px "Noto Sans TC",sans-serif'; ctx.fillText("貼心提醒", LX+30, ly);
+    ly+=14; ctx.fillStyle="#8b8171"; ctx.font='400 28px "Noto Sans TC",sans-serif'; para(lines, LX+30, ly+34, 44);
+    y+=ch+44;
+  } else { y+=10; }
+  // CTA + 署名
+  await drawTextWithIce(ctx, "來測你們的刨冰契合度", cx, y, '700 36px "Noto Sans TC",sans-serif', "#3c372e", "#b45c3f");
+  y+=44;
+  ctx.textAlign="center"; ctx.fillStyle="#a99f8c"; ctx.font='400 22px "Noto Sans TC",sans-serif';
+  ctx.fillText("Emily 發想概念 × Mike 設計實作", cx, y);
+  y+=20;
+  const H=Math.round(y+48);
+  const out=document.createElement("canvas"); out.width=W; out.height=H;
+  const octx=out.getContext("2d");
+  octx.fillStyle="#faf5ea"; octx.fillRect(0,0,W,H);
+  octx.strokeStyle="rgba(60,55,46,.18)"; octx.lineWidth=3; roundRect(octx,30,30,W-60,H-60,26); octx.stroke();
+  octx.drawImage(cv, 0,0, W, H, 0,0, W, H);
+  return await new Promise(res=>out.toBlob(res,"image/png"));
+}
+// 進契合度結果頁時先產好卡片（同單人卡：為了原生分享要事先備好，點擊當下不 await）。
+let compatFilePromise=null, compatFileReady=null;
+function primeCompatCard(partner, lvl, n){
+  compatFileReady=null;
+  const nm=`刨冰契合度_${lvl.name}_${n}of5.png`;
+  compatFilePromise=compatCardBlob(partner)
+    .then(blob=>{ compatFileReady = blob ? new File([blob],nm,{type:"image/png"}) : null; return compatFileReady; })
+    .catch(()=>null);
+}
 function mountCompatResult(partner){
   const shared=state.must.filter(id=>partner.must.includes(id));
   const n=shared.length, lvl=compatLevel(n);
@@ -973,12 +1220,12 @@ function mountCompatResult(partner){
   const meter=`${"●".repeat(n)}${"○".repeat(5-n)}<b>${n} / 5</b>`;
   const sharedBlock = n
     ? `<div class="res-summary"><div class="rs-row"><span class="rs-k" style="color:var(--accent)">共同</span>${miniList(shared)}</div></div>`
-    : `<div class="res-subdesc" style="text-align:center">你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多 🍧</div>`;
+    : `<div class="res-subdesc" style="text-align:center">你們沒有相同的必吃配料。各自點一碗，加起來能一起吃到的更多。</div>`;
   const lm=[];
   if(theirFavMyBan.length) lm.push(`${theirFavMyBan.map(id=>byId(id).name).join("、")} 是對方的最愛，卻在你的地雷名單上`);
   if(myFavTheirBan.length) lm.push(`${myFavTheirBan.map(id=>byId(id).name).join("、")} 是你的最愛，卻在對方的地雷名單上`);
   const landmineBlock = lm.length
-    ? `<div class="landmine"><b>貼心提醒</b>　${lm.join("；")}。剛好各自一碗，誰都不用勉強自己 😌</div>`
+    ? `<div class="landmine"><b>貼心提醒</b>　${lm.join("；")}。剛好各自一碗，誰都不用勉強自己。</div>`
     : "";
   app.innerHTML=`
     <header class="mast">
@@ -1000,24 +1247,34 @@ function mountCompatResult(partner){
       ${sharedBlock}
       ${landmineBlock}
       <div class="res-actions">
-        <button class="wc-cta ready" id="shareCompat">分享我們的契合度 🍧</button>
+        <button class="wc-cta ready" id="shareCompat">分享我們的契合度${iceIconSvg()}</button>
         <button class="ghost-btn" id="again">換一個代碼再測</button>
       </div>
       <button class="ghost-btn small" id="back">← 回我的結果</button>
+      <div class="credit">概念發想　<b>Emily</b>　×　設計實作　<b>Mike</b></div>
     </div>`;
+  primeCompatCard(partner, lvl, n);   // 先產好契合度卡，按分享時直接叫原生分享面板
   document.getElementById("shareCompat").onclick=(e)=>shareCompatResult(lvl, n, e.currentTarget);
   document.getElementById("again").onclick=()=>{ state.screen="compat"; render(); window.scrollTo(0,0); };
   document.getElementById("back").onclick=()=>{ state.screen="result"; render(); window.scrollTo(0,0); };
 }
+// 契合度分享：與單人分享同套 — 手機用事先備好的圖叫原生分享面板，桌機退回下載圖＋複製文字。
 async function shareCompatResult(lvl, n, btn){
   const orig=btn.textContent;
   const url = /^https?:/.test(location.origin) ? location.href.split("#")[0] : "";
-  const text = `我們的刨冰契合度是「${lvl.name}」，必吃重疊 ${n}/5 🍧 來測你們的～`;
+  const text = `我們的刨冰契合度是「${lvl.name}」，必吃重疊 ${n}/5。來測你們的吧。`;
   if(navigator.share){
-    try{ await navigator.share(url?{title:"刨冰人格測驗",text,url}:{title:"刨冰人格測驗",text}); return; }
+    const file=compatFileReady;
+    const canFile = file && navigator.canShare && navigator.canShare({files:[file]});
+    const payload = canFile ? {files:[file], text} : (url ? {title:"刨冰人格測驗", text, url} : {title:"刨冰人格測驗", text});
+    try{ await navigator.share(payload); return; }
     catch(err){ if(err && err.name==="AbortError") return; }
   }
-  copyText(url?`${text} ${url}`:text, btn, orig, "已複製，貼給對方 ✓");
+  btn.textContent="準備圖片…"; btn.disabled=true;
+  let file=compatFileReady; if(!file && compatFilePromise){ try{ file=await compatFilePromise; }catch(e){} }
+  btn.disabled=false; btn.textContent=orig;
+  if(file){ const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=file.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+  copyText(url?`${text} ${url}`:text, btn, orig, file ? "已下載圖 + 複製文字 ✓" : "已複製，貼給對方 ✓");
 }
 
 render();
